@@ -7,7 +7,14 @@ export const buildInboxData = inboxParams => {
   const formData = new FormData();
   const { channel = {}, ...inboxProperties } = inboxParams;
   Object.keys(inboxProperties).forEach(key => {
-    formData.append(key, inboxProperties[key]);
+    const value = inboxProperties[key];
+    // Evita enviar "null" ou "undefined" como string no FormData
+    // O backend já tem lógica para tratar string "null", mas é melhor não enviar
+    if (value === null || value === undefined) {
+      formData.append(key, '');
+    } else {
+      formData.append(key, value);
+    }
   });
   const { selectedFeatureFlags, ...channelParams } = channel;
   // selectedFeatureFlags needs to be empty when creating a website channel
@@ -21,7 +28,12 @@ export const buildInboxData = inboxParams => {
     }
   }
   Object.keys(channelParams).forEach(key => {
-    formData.append(`channel[${key}]`, channel[key]);
+    const value = channel[key];
+    if (value === null || value === undefined) {
+      formData.append(`channel[${key}]`, '');
+    } else {
+      formData.append(`channel[${key}]`, value);
+    }
   });
   return formData;
 };

@@ -376,6 +376,10 @@ export default {
           });
         } else {
           this.selectedFeatureFlags = newInbox?.selected_feature_flags || [];
+          // Sincronizar ai_prompt quando o mesmo inbox é atualizado (ex: após salvar)
+          if (newInbox?.ai_prompt !== oldInbox?.ai_prompt) {
+            this.aiPrompt = newInbox?.ai_prompt || '';
+          }
         }
       },
       immediate: true,
