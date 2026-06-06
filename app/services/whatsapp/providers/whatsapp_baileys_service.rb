@@ -405,7 +405,8 @@ class Whatsapp::Providers::WhatsappBaileysService < Whatsapp::Providers::BaseSer
       "#{provider_url}/connections/#{whatsapp_channel.phone_number}/profile-picture-url",
       headers: api_headers,
       query: { jid: jid },
-      format: :json
+      format: :json,
+      timeout: 5
     )
 
     return nil unless process_response(response)
