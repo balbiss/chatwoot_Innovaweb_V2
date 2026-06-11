@@ -4,7 +4,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import AsaasChargeModal from './AsaasChargeModal.vue';
 
-const props = defineProps({
+defineProps({
   conversationId: {
     type: [Number, String],
     required: true,

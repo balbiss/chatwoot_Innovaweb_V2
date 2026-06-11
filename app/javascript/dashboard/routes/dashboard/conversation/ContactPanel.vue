@@ -278,6 +278,7 @@ onMounted(() => {
           </div>
           <div v-else-if="element.name === 'asaas_integration'">
             <AccordionItem
+              v-if="contact.id"
               title="Integração Asaas"
               :is-open="isContactSidebarItemOpen('is_asaas_open')"
               compact
