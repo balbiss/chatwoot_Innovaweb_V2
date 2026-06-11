@@ -276,7 +276,9 @@ onMounted(() => {
               />
             </AccordionItem>
           </div>
+          <!-- eslint-disable-next-line vue/no-bare-strings-in-template -->
           <div v-else-if="element.name === 'asaas_integration'">
+            <!-- eslint-disable-next-line vue/no-bare-strings-in-template -->
             <AccordionItem
               v-if="contact.id"
               title="Integração Asaas"

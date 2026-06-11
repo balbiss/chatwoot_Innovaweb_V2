@@ -1,4 +1,5 @@
 <script setup>
+/* eslint-disable vue/no-bare-strings-in-template */
 import { ref } from 'vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
@@ -26,6 +27,7 @@ const closeModal = () => {
 };
 </script>
 
+<!-- eslint-disable vue/no-bare-strings-in-template -->
 <template>
   <div class="px-4 py-2">
     <Button

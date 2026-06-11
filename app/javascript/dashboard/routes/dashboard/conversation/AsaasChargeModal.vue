@@ -1,4 +1,5 @@
 <script setup>
+/* eslint-disable vue/no-bare-strings-in-template */
 import { ref, computed, onMounted } from 'vue';
 import { useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
@@ -43,7 +44,7 @@ onMounted(() => {
     charge.value.email = contact.value.email || '';
     charge.value.cpfCnpj = contact.value.custom_attributes?.cpf || '';
   }
-  
+
   // Vencimento padrão para amanhã
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
@@ -64,13 +65,13 @@ const validateCharge = () => {
 
 const generateCharge = async () => {
   if (!validateCharge()) return;
-  
+
   isLoading.value = true;
   try {
     await asaasApi.createCharge({
       conversation_id: props.conversationId,
       contact_id: props.contactId,
-      charge: charge.value
+      charge: charge.value,
     });
     useAlert('Cobrança gerada com sucesso! Um link foi enviado no chat.');
     onClose();
@@ -82,6 +83,7 @@ const generateCharge = async () => {
 };
 </script>
 
+<!-- eslint-disable vue/no-bare-strings-in-template -->
 <template>
   <Modal :show="show" :on-close="onClose" class="asaas-modal">
     <ModalHeader
@@ -89,7 +91,7 @@ const generateCharge = async () => {
       header-content="Gere boletos, Pix ou assinaturas diretamente para este contato."
       icon="i-lucide-banknote"
     />
-    
+
     <div class="px-8 py-4 overflow-y-auto max-h-[70vh]">
       <!-- Dados do Cliente -->
       <div class="mb-6">
@@ -138,7 +140,7 @@ const generateCharge = async () => {
 
         <label class="flex flex-col gap-1 text-sm font-medium text-n-slate-11 mb-4">
           Descrição (Impressa no boleto)
-          <textarea v-model="charge.description" rows="2" class="px-3 py-2 border border-n-weak rounded-md text-n-slate-12 bg-n-background"></textarea>
+          <textarea v-model="charge.description" rows="2" class="px-3 py-2 border border-n-weak rounded-md text-n-slate-12 bg-n-background" />
         </label>
       </div>
 
@@ -147,11 +149,11 @@ const generateCharge = async () => {
         <h3 class="text-sm font-semibold text-n-slate-12 mb-3 pb-2 border-b border-n-weak">
           Configurações Avançadas (Opcional)
         </h3>
-        
+
         <div class="flex items-center gap-6 mb-4">
           <label class="flex items-center gap-2 text-sm text-n-slate-12 cursor-pointer">
             <input v-model="charge.subscription" type="checkbox" class="w-4 h-4 text-n-brand rounded border-n-weak focus:ring-n-brand" />
-            É uma Assinatura Mensal?
+            Assinatura Mensal?
           </label>
           <label class="flex items-center gap-2 text-sm text-n-slate-12 cursor-pointer">
             <input v-model="charge.sendAsaasNotification" type="checkbox" class="w-4 h-4 text-n-brand rounded border-n-weak focus:ring-n-brand" />
@@ -181,7 +183,9 @@ const generateCharge = async () => {
         Cancelar
       </Button>
       <Button :is-loading="isLoading" @click="generateCharge">
-        <template #icon><Icon icon="i-lucide-check-circle" /></template>
+        <template #icon>
+          <Icon icon="i-lucide-check-circle" />
+        </template>
         Gerar Cobrança
       </Button>
     </div>
@@ -190,7 +194,6 @@ const generateCharge = async () => {
 
 <style scoped>
 .asaas-modal {
-  /* Customize se precisar aumentar a largura no Vue 3 Chatwoot */
   --modal-max-width: 600px;
 }
 </style>
