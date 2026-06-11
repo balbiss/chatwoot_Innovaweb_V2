@@ -8,7 +8,9 @@ export default {
     {
       path: frontendURL('accounts/:accountId/settings/asaas'),
       name: 'asaas_settings',
-      roles: ROLES,
+      meta: {
+        permissions: ROLES,
+      },
       component: AsaasSettings,
     },
   ],

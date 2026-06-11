@@ -4,6 +4,7 @@ import asaasApi from 'dashboard/api/asaas';
 import Button from 'dashboard/components-next/button/Button.vue';
 
 export default {
+  name: 'AsaasSettings',
   components: {
     Button,
   },
