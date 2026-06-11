@@ -1,6 +1,6 @@
 <script>
 import { useAlert } from 'dashboard/composables';
-import asaasApi from '../../../../api/asaas';
+import asaasApi from 'dashboard/api/asaas';
 import Button from 'dashboard/components-next/button/Button.vue';
 
 export default {

@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { useStore, useMapGetter } from 'dashboard/composables/store';
+import { useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 import asaasApi from 'dashboard/api/asaas';
 
@@ -17,7 +17,6 @@ const props = defineProps({
 
 const emit = defineEmits(['close']);
 
-const store = useStore();
 const contactGetter = useMapGetter('contacts/getContact');
 const contact = computed(() => contactGetter.value(props.contactId));
 

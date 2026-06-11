@@ -1,3 +1,5 @@
+/* global axios */
+
 import ApiClient from './ApiClient';
 
 class AsaasAPI extends ApiClient {
@@ -6,15 +8,15 @@ class AsaasAPI extends ApiClient {
   }
 
   getSettings() {
-    return this.axios.get(this.url);
+    return axios.get(this.url);
   }
 
   updateSettings(data) {
-    return this.axios.patch(this.url, data);
+    return axios.patch(this.url, data);
   }
 
   createCharge(data) {
-    return this.axios.post(`${this.url}/create_charge`, data);
+    return axios.post(`${this.url}/create_charge`, data);
   }
 }
 
