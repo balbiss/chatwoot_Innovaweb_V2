@@ -1,5 +1,8 @@
 import { frontendURL } from '../../../../helper/URLHelper';
-import { ROLES } from 'dashboard/constants/permissions.js';
+import {
+  ROLES,
+  CONVERSATION_PERMISSIONS,
+} from 'dashboard/constants/permissions.js';
 
 const AsaasSettings = () => import('./AsaasSettings.vue');
 
@@ -9,7 +12,7 @@ export default {
       path: frontendURL('accounts/:accountId/settings/asaas'),
       name: 'asaas_settings',
       meta: {
-        permissions: ROLES,
+        permissions: [...ROLES, ...CONVERSATION_PERMISSIONS],
       },
       component: AsaasSettings,
     },
