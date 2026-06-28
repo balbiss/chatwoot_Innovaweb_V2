@@ -87,7 +87,11 @@ services:
       - RAILS_ENV=production
       - FRONTEND_URL=https://chat.inoovaweb.com.br
       - SECRET_KEY_BASE=60f4fbf838dcc735542a7be701971a89e79eb4af33b0ad9a31cddfcb1d3a33cba6aa9f575f0a8944bc9342cefab167c779b6f5b1513eae1114c24a5d34fb9e93
-      - DATABASE_URL=postgresql://chatwoot:ChPg_X9mK2nQwR5vT8sL3j@chatwoot_db:5432/chatwoot_production
+      - POSTGRES_HOST=chatwoot_db
+      - POSTGRES_PORT=5432
+      - POSTGRES_DATABASE=chatwoot_production
+      - POSTGRES_USERNAME=chatwoot
+      - POSTGRES_PASSWORD=ChPg_X9mK2nQwR5vT8sL3j
       - REDIS_URL=redis://:ChRd_Y4pJ7hN3fV6uE1aM@chatwoot_redis:6379/0
       - RAILS_LOG_TO_STDOUT=true
       - RAILS_SERVE_STATIC_FILES=true
@@ -145,7 +149,11 @@ services:
       - RAILS_ENV=production
       - FRONTEND_URL=https://chat.inoovaweb.com.br
       - SECRET_KEY_BASE=60f4fbf838dcc735542a7be701971a89e79eb4af33b0ad9a31cddfcb1d3a33cba6aa9f575f0a8944bc9342cefab167c779b6f5b1513eae1114c24a5d34fb9e93
-      - DATABASE_URL=postgresql://chatwoot:ChPg_X9mK2nQwR5vT8sL3j@chatwoot_db:5432/chatwoot_production
+      - POSTGRES_HOST=chatwoot_db
+      - POSTGRES_PORT=5432
+      - POSTGRES_DATABASE=chatwoot_production
+      - POSTGRES_USERNAME=chatwoot
+      - POSTGRES_PASSWORD=ChPg_X9mK2nQwR5vT8sL3j
       - REDIS_URL=redis://:ChRd_Y4pJ7hN3fV6uE1aM@chatwoot_redis:6379/0
       - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY=HqIscFcc4D9D6F40wWf6DXT6kDIQt8xTumhs3ruw5+0=
       - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY=rR1XNta//Bh2uDSrZGqOF+5u8vGbdu/YWD+6pHoKPQQ=
