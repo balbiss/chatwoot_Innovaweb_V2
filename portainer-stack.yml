@@ -1,144 +1,185 @@
-version: '3.8'
+version: "3.7"
 
 services:
-  chatwoot_web:
-    image: ghcr.io/balbiss/chatwoot_innovaweb_v2:latest
-    command: bundle exec rails s -p 3000 -b 0.0.0.0
-    environment:
-      - SECRET_KEY_BASE=${SECRET_KEY_BASE}
-      - FRONTEND_URL=${FRONTEND_URL}
-      - DATABASE_URL=postgres://postgres:${POSTGRES_PASSWORD}@chatwoot_db:5432/chatwoot_production
-      - REDIS_URL=redis://:${REDIS_PASSWORD}@chatwoot_redis:6379
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - RAILS_ENV=production
-      - RAILS_LOG_TO_STDOUT=true
-      - RAILS_SERVE_STATIC_FILES=true
-      - ENABLE_ACCOUNT_SIGNUP=false
-      - FORCE_SSL=false
-      - MAILER_SENDER_EMAIL=${MAILER_SENDER_EMAIL}
-      - SMTP_ADDRESS=${SMTP_ADDRESS}
-      - SMTP_USERNAME=${SMTP_USERNAME}
-      - SMTP_PASSWORD=${SMTP_PASSWORD}
-      - SMTP_PORT=${SMTP_PORT:-587}
-      - SMTP_AUTHENTICATION=plain
-      - SMTP_ENABLE_STARTTLS_AUTO=true
-      - BAILEYS_PROVIDER_DEFAULT_URL=${BAILEYS_PROVIDER_DEFAULT_URL}
-      - BAILEYS_PROVIDER_DEFAULT_API_KEY=${BAILEYS_PROVIDER_DEFAULT_API_KEY}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY=${ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY}
-      - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY=${ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY}
-      - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT=${ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT}
-    depends_on:
-      - chatwoot_db
-      - chatwoot_redis
-    networks:
-      - chatwoot_net
-      - traefik-public
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
-      labels:
-        - "traefik.enable=true"
-        - "traefik.docker.network=traefik-public"
-        - "traefik.http.routers.chatwoot.rule=Host(`${DOMAIN}`)"
-        - "traefik.http.routers.chatwoot.entrypoints=websecure"
-        - "traefik.http.routers.chatwoot.tls.certresolver=letsencrypt"
-        - "traefik.http.services.chatwoot.loadbalancer.server.port=3000"
-    volumes:
-      - chatwoot_storage:/app/storage
-      - chatwoot_public:/app/public/packs
 
-  chatwoot_sidekiq:
-    image: ghcr.io/balbiss/chatwoot_innovaweb_v2:latest
-    command: bundle exec sidekiq -C config/sidekiq.yml
-    environment:
-      - SECRET_KEY_BASE=${SECRET_KEY_BASE}
-      - FRONTEND_URL=${FRONTEND_URL}
-      - DATABASE_URL=postgres://postgres:${POSTGRES_PASSWORD}@chatwoot_db:5432/chatwoot_production
-      - REDIS_URL=redis://:${REDIS_PASSWORD}@chatwoot_redis:6379
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - RAILS_ENV=production
-      - RAILS_LOG_TO_STDOUT=true
-      - BAILEYS_PROVIDER_DEFAULT_URL=${BAILEYS_PROVIDER_DEFAULT_URL}
-      - BAILEYS_PROVIDER_DEFAULT_API_KEY=${BAILEYS_PROVIDER_DEFAULT_API_KEY}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY=${ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY}
-      - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY=${ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY}
-      - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT=${ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT}
-    depends_on:
-      - chatwoot_db
-      - chatwoot_redis
-    networks:
-      - chatwoot_net
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
-    volumes:
-      - chatwoot_storage:/app/storage
+  ## --------------------------- BANCO DE DADOS --------------------------- ##
 
   chatwoot_db:
     image: pgvector/pgvector:pg16
     environment:
+      - POSTGRES_USER=chatwoot
+      - POSTGRES_PASSWORD=ChPg_X9mK2nQwR5vT8sL3j
       - POSTGRES_DB=chatwoot_production
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     volumes:
-      - chatwoot_db_data:/var/lib/postgresql/data
+      - chatwoot_postgres_data:/var/lib/postgresql/data
     networks:
-      - chatwoot_net
+      - inoovawebpro
     deploy:
+      mode: replicated
       replicas: 1
-      restart_policy:
-        condition: on-failure
       placement:
         constraints:
           - node.role == manager
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+
+  ## --------------------------- REDIS --------------------------- ##
 
   chatwoot_redis:
     image: redis:7-alpine
-    command: redis-server --requirepass ${REDIS_PASSWORD}
+    command: redis-server --requirepass ChRd_Y4pJ7hN3fV6uE1aM --appendonly yes
     volumes:
       - chatwoot_redis_data:/data
     networks:
-      - chatwoot_net
+      - inoovawebpro
     deploy:
+      mode: replicated
       replicas: 1
-      restart_policy:
-        condition: on-failure
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
+  ## --------------------------- WHATSAPP (BAILEYS) --------------------------- ##
 
   chatwoot_baileys:
     image: ghcr.io/fazer-ai/baileys-api:latest
+    command:
+      - sh
+      - "-c"
+      - "bun manage-api-keys create user chatwoot2025key && bun start"
     environment:
-      - API_KEY=${BAILEYS_PROVIDER_DEFAULT_API_KEY}
+      - NODE_ENV=production
+      - PORT=3025
+      - REDIS_URL=redis://:ChRd_Y4pJ7hN3fV6uE1aM@chatwoot_redis:6379/1
+      - LOG_LEVEL=warn
+      - BAILEYS_LOG_LEVEL=error
+      - BAILEYS_PROVIDER_DEFAULT_API_KEY=chatwoot2025key
+      - IGNORE_GROUP_MESSAGES=true
+      - IGNORE_STATUS_MESSAGES=true
     volumes:
-      - chatwoot_baileys_data:/app/sessions
+      - chatwoot_baileys_storage:/app/storage
     networks:
-      - chatwoot_net
-      - traefik-public
+      - inoovawebpro
     deploy:
+      mode: replicated
       replicas: 1
-      restart_policy:
-        condition: on-failure
-      labels:
-        - "traefik.enable=true"
-        - "traefik.docker.network=traefik-public"
-        - "traefik.http.routers.chatwoot-baileys.rule=Host(`${BAILEYS_DOMAIN}`)"
-        - "traefik.http.routers.chatwoot-baileys.entrypoints=websecure"
-        - "traefik.http.routers.chatwoot-baileys.tls.certresolver=letsencrypt"
-        - "traefik.http.services.chatwoot-baileys.loadbalancer.server.port=3000"
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
 
-networks:
-  chatwoot_net:
-    driver: overlay
-    attachable: true
-  traefik-public:
-    external: true
+  ## --------------------------- WEB (RAILS + FRONTEND EMBUTIDO) --------------------------- ##
+
+  chatwoot_web:
+    image: ghcr.io/balbiss/chatwoot_innovaweb_v2:latest
+    command: >
+      sh -c "until bundle exec rake db:chatwoot_prepare && bundle exec rails db:migrate; do echo 'Aguardando banco...'; sleep 5; done && bundle exec rails s -p 3000 -b 0.0.0.0"
+    environment:
+      - RAILS_ENV=production
+      - FRONTEND_URL=https://chat.inoovaweb.com.br
+      - SECRET_KEY_BASE=60f4fbf838dcc735542a7be701971a89e79eb4af33b0ad9a31cddfcb1d3a33cba6aa9f575f0a8944bc9342cefab167c779b6f5b1513eae1114c24a5d34fb9e93
+      - DATABASE_URL=postgres://chatwoot:ChPg_X9mK2nQwR5vT8sL3j@chatwoot_db:5432/chatwoot_production
+      - REDIS_URL=redis://:ChRd_Y4pJ7hN3fV6uE1aM@chatwoot_redis:6379/0
+      - RAILS_LOG_TO_STDOUT=true
+      - RAILS_SERVE_STATIC_FILES=true
+      - ENABLE_ACCOUNT_SIGNUP=false
+      - FORCE_SSL=false
+      - TZ=America/Sao_Paulo
+      - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY=HqIscFcc4D9D6F40wWf6DXT6kDIQt8xTumhs3ruw5+0=
+      - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY=rR1XNta//Bh2uDSrZGqOF+5u8vGbdu/YWD+6pHoKPQQ=
+      - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT=z9mpgK0/j/BXPRflOMmWk1tsJ5PtquXxX8v8yzcYtP4=
+      - BAILEYS_PROVIDER_DEFAULT_URL=http://chatwoot_baileys:3025
+      - BAILEYS_PROVIDER_DEFAULT_API_KEY=chatwoot2025key
+      - OPENAI_API_KEY=sk-proj-COLOQUE_SUA_CHAVE_OPENAI_AQUI
+      - MAILER_SENDER_EMAIL=suporte@inoovaweb.com.br
+      - SMTP_ADDRESS=smtp.inoovaweb.com.br
+      - SMTP_PORT=587
+      - SMTP_USERNAME=suporte@inoovaweb.com.br
+      - SMTP_PASSWORD=COLOQUE_SUA_SENHA_SMTP_AQUI
+      - SMTP_AUTHENTICATION=plain
+      - SMTP_ENABLE_STARTTLS_AUTO=true
+    volumes:
+      - chatwoot_storage:/app/storage
+      - chatwoot_public:/app/public/packs
+    networks:
+      - inoovawebpro
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          cpus: "2"
+          memory: 1536M
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.chatwoot_web.rule=Host(`chat.inoovaweb.com.br`)
+        - traefik.http.routers.chatwoot_web.entrypoints=websecure
+        - traefik.http.routers.chatwoot_web.tls.certresolver=letsencryptresolver
+        - traefik.http.routers.chatwoot_web.service=chatwoot_web
+        - traefik.http.services.chatwoot_web.loadbalancer.server.port=3000
+        - traefik.http.services.chatwoot_web.loadbalancer.passHostHeader=1
+        - traefik.http.services.chatwoot_web.loadbalancer.responseForwarding.flushInterval=100ms
+
+  ## --------------------------- SIDEKIQ (WORKER DE BACKGROUND) --------------------------- ##
+
+  chatwoot_sidekiq:
+    image: ghcr.io/balbiss/chatwoot_innovaweb_v2:latest
+    command: sh -c "sleep 40 && bundle exec sidekiq -C config/sidekiq.yml"
+    environment:
+      - RAILS_ENV=production
+      - FRONTEND_URL=https://chat.inoovaweb.com.br
+      - SECRET_KEY_BASE=60f4fbf838dcc735542a7be701971a89e79eb4af33b0ad9a31cddfcb1d3a33cba6aa9f575f0a8944bc9342cefab167c779b6f5b1513eae1114c24a5d34fb9e93
+      - DATABASE_URL=postgres://chatwoot:ChPg_X9mK2nQwR5vT8sL3j@chatwoot_db:5432/chatwoot_production
+      - REDIS_URL=redis://:ChRd_Y4pJ7hN3fV6uE1aM@chatwoot_redis:6379/0
+      - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY=HqIscFcc4D9D6F40wWf6DXT6kDIQt8xTumhs3ruw5+0=
+      - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY=rR1XNta//Bh2uDSrZGqOF+5u8vGbdu/YWD+6pHoKPQQ=
+      - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT=z9mpgK0/j/BXPRflOMmWk1tsJ5PtquXxX8v8yzcYtP4=
+      - BAILEYS_PROVIDER_DEFAULT_URL=http://chatwoot_baileys:3025
+      - BAILEYS_PROVIDER_DEFAULT_API_KEY=chatwoot2025key
+      - OPENAI_API_KEY=sk-proj-COLOQUE_SUA_CHAVE_OPENAI_AQUI
+      - RAILS_LOG_TO_STDOUT=true
+      - TZ=America/Sao_Paulo
+    volumes:
+      - chatwoot_storage:/app/storage
+    networks:
+      - inoovawebpro
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+
+## ================================================================
 
 volumes:
-  chatwoot_db_data:
+  chatwoot_postgres_data:
   chatwoot_redis_data:
+  chatwoot_baileys_storage:
   chatwoot_storage:
   chatwoot_public:
-  chatwoot_baileys_data:
+
+networks:
+  inoovawebpro:
+    external: true
+    name: inoovawebpro
