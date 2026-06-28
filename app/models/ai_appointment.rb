@@ -12,3 +12,4 @@ class AiAppointment < ApplicationRecord
 
   scope :upcoming, -> { where('appointment_date >= ?', Date.today).order(appointment_date: :asc, start_time: :asc) }
   scope :by_status, ->(s) { where(status: s) }
+end
