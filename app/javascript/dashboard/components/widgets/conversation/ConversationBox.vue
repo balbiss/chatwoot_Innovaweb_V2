@@ -4,6 +4,7 @@ import ConversationHeader from './ConversationHeader.vue';
 import DashboardAppFrame from '../DashboardApp/Frame.vue';
 import EmptyState from './EmptyState/EmptyState.vue';
 import MessagesView from './MessagesView.vue';
+import AiBanner from './AiBanner.vue';
 
 export default {
   components: {
@@ -11,6 +12,7 @@ export default {
     DashboardAppFrame,
     EmptyState,
     MessagesView,
+    AiBanner,
   },
   props: {
     inboxId: {
@@ -107,6 +109,7 @@ export default {
         'border-b border-b-n-weak !pt-2': !dashboardApps.length,
       }"
     />
+    <AiBanner v-if="currentChat.id" :conversation="currentChat" />
     <woot-tabs
       v-if="conversationDashboardApps.length && currentChat.id"
       :index="activeIndex"

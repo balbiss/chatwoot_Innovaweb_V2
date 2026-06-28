@@ -40,6 +40,12 @@ remove_stale_redis_keys_job.rb:
   class: 'Internal::RemoveStaleRedisKeysJob'
   queue: scheduled_jobs
 
+# IA Follow-up — roda a cada 15 minutos
+ai_followup_job:
+  cron: '*/15 * * * *'
+  class: 'AiFollowupJob'
+  queue: low
+
 # DISABLED: investigating if this job is the source of orphan conversations
 # #executed daily at 0430 UTC
 # # which will be IST 10:00 AM

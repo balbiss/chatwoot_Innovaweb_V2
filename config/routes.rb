@@ -126,6 +126,19 @@ Rails.application.routes.draw do
           resources :dashboard_apps, only: [:index, :show, :create, :update, :destroy]
           get :leads_dashboard, to: 'leads_dashboard#index'
 
+          # Catálogo e Agendamentos (IA Universal)
+          resources :catalog_items, only: [:index, :show, :create, :update, :destroy]
+          resources :ai_appointments, only: [:index, :show, :create, :update, :destroy]
+
+          # IA — gerador de prompt e controle por conversa
+          post :ai_generate_prompt, to: 'ai#generate_prompt'
+          resources :conversations, only: [] do
+            member do
+              get :ai_status, to: 'ai#ai_status'
+              post :resume_ai, to: 'ai#resume_ai'
+            end
+          end
+
           # Asaas Integration
           resource :asaas, only: [:show, :update], controller: 'asaas' do
             post :create_charge

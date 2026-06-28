@@ -20,7 +20,8 @@ class AsyncDispatcher < BaseDispatcher
       ParticipationListener.instance,
       ReportingEventListener.instance,
       WebhookListener.instance,
-      ChannelListener.instance
+      ChannelListener.instance,
+      AiListener.instance
     ]
   end
 end

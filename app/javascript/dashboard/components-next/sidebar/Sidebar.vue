@@ -722,6 +722,18 @@ const menuItems = computed(() => {
           to: accountScopedRoute('asaas_settings'),
         },
         {
+          name: 'Catalog',
+          label: 'Catálogo',
+          icon: 'i-lucide-package',
+          to: accountScopedRoute('catalog_settings'),
+        },
+        {
+          name: 'AI Appointments',
+          label: 'Agendamentos',
+          icon: 'i-lucide-calendar-check',
+          to: accountScopedRoute('ai_appointments'),
+        },
+        {
           name: 'Settings Integrations',
           label: t('SIDEBAR.INTEGRATIONS'),
           icon: 'i-lucide-blocks',

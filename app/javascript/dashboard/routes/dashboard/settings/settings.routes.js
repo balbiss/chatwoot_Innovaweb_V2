@@ -27,6 +27,8 @@ import security from './security/security.routes';
 import conversationWorkflow from './conversationWorkflow/conversationWorkflow.routes';
 import captain from './captain/captain.routes';
 import asaas from './asaas/asaas.routes';
+import catalog from './catalog/catalog.routes';
+import aiappointments from './aiappointments/aiappointments.routes';
 
 export default {
   routes: [
@@ -69,5 +71,7 @@ export default {
     ...conversationWorkflow.routes,
     ...captain.routes,
     ...asaas.routes,
+    ...catalog.routes,
+    ...aiappointments.routes,
   ],
 };

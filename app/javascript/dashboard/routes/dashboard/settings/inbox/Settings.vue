@@ -22,6 +22,7 @@ import WeeklyAvailability from './components/WeeklyAvailability.vue';
 import GreetingsEditor from 'shared/components/GreetingsEditor.vue';
 import ConfigurationPage from './settingsPage/ConfigurationPage.vue';
 import CustomerSatisfactionPage from './settingsPage/CustomerSatisfactionPage.vue';
+import AiSettings from './settingsPage/AiSettings.vue';
 import CollaboratorsPage from './settingsPage/CollaboratorsPage.vue';
 import BotConfiguration from './components/BotConfiguration.vue';
 import AccountHealth from './components/AccountHealth.vue';
@@ -76,6 +77,7 @@ export default {
     Widget,
     AccessToken,
     TextArea,
+    AiSettings,
   },
   mixins: [inboxMixin],
   setup() {
@@ -229,6 +231,16 @@ export default {
           {
             key: 'whatsapp-health',
             name: this.$t('INBOX_MGMT.TABS.ACCOUNT_HEALTH'),
+          },
+        ];
+      }
+
+      if (this.isAWhatsAppBaileysChannel) {
+        visibleToAllChannelTabs = [
+          ...visibleToAllChannelTabs,
+          {
+            key: 'ai-automation',
+            name: '🤖 IA e Automação',
           },
         ];
       }
@@ -1390,6 +1402,9 @@ export default {
         </div>
         <div v-if="selectedTabKey === 'bot-configuration'">
           <BotConfiguration :inbox="inbox" />
+        </div>
+        <div v-if="selectedTabKey === 'ai-automation'">
+          <AiSettings :inbox="inbox" />
         </div>
         <div v-if="selectedTabKey === 'whatsapp-health'">
           <AccountHealth
