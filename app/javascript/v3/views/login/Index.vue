@@ -225,14 +225,9 @@ export default {
     <section class="max-w-5xl mx-auto flex flex-col items-center">
       <!-- Logo grande e centralizada -->
       <img
-        :src="globalConfig.logo || 'https://i.postimg.cc/X7cHgLFw/Gemini-Generated-Image-alcehfalcehfalce-Photoroom.png'"
+        src="https://i.postimg.cc/X7cHgLFw/Gemini-Generated-Image-alcehfalcehfalce-Photoroom.png"
         :alt="globalConfig.installationName"
-        class="block w-auto max-h-24 mx-auto dark:hidden"
-      />
-      <img
-        :src="globalConfig.logoDark || 'https://i.postimg.cc/X7cHgLFw/Gemini-Generated-Image-alcehfalcehfalce-Photoroom.png'"
-        :alt="globalConfig.installationName"
-        class="hidden w-auto max-h-24 mx-auto dark:block"
+        class="block w-auto max-h-24 mx-auto"
       />
       <p v-if="showSignupLink" class="mt-3 text-sm text-center text-n-slate-11">
         {{ $t('COMMON.OR') }}
