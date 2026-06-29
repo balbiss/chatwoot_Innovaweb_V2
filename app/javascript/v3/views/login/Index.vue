@@ -234,10 +234,6 @@ export default {
         :alt="globalConfig.installationName"
         class="hidden w-auto max-h-24 mx-auto dark:block"
       />
-      <!-- Nome da plataforma abaixo da logo -->
-      <h2 class="mt-4 text-3xl font-medium text-center text-n-slate-12">
-        {{ replaceInstallationName($t('LOGIN.TITLE')) }}
-      </h2>
       <p v-if="showSignupLink" class="mt-3 text-sm text-center text-n-slate-11">
         {{ $t('COMMON.OR') }}
         <router-link to="auth/signup" class="lowercase text-link text-n-brand">
