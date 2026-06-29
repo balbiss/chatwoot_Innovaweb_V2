@@ -227,7 +227,7 @@ export default {
       <img
         src="https://i.postimg.cc/X7cHgLFw/Gemini-Generated-Image-alcehfalcehfalce-Photoroom.png"
         :alt="globalConfig.installationName"
-        class="block mx-auto w-80"
+        class="block mx-auto w-full max-w-lg"
       />
       <p v-if="showSignupLink" class="mt-3 text-sm text-center text-n-slate-11">
         {{ $t('COMMON.OR') }}
