@@ -220,15 +220,15 @@ export default {
 
 <template>
   <main
-    class="flex flex-col w-full min-h-screen py-20 sm:px-6 lg:px-8"
+    class="flex flex-col w-full min-h-screen py-8 sm:py-16 px-4 sm:px-6 lg:px-8"
     style="background-image: url('https://i.postimg.cc/c48RMykv/Gemini-Generated-Image-rjzou0rjzou0rjzo.png'); background-size: cover; background-position: center; background-repeat: no-repeat;"
   >
-    <section class="max-w-5xl mx-auto flex flex-col items-center">
+    <section class="w-full max-w-sm sm:max-w-lg mx-auto flex flex-col items-center">
       <!-- Logo grande e centralizada -->
       <img
         src="https://i.postimg.cc/X7cHgLFw/Gemini-Generated-Image-alcehfalcehfalce-Photoroom.png"
         :alt="globalConfig.installationName"
-        class="block mx-auto w-full max-w-lg"
+        class="block mx-auto w-full"
       />
       <p v-if="showSignupLink" class="mt-3 text-sm text-center text-n-slate-11">
         {{ $t('COMMON.OR') }}
@@ -239,7 +239,7 @@ export default {
     </section>
 
     <!-- MFA Verification Section -->
-    <section v-if="mfaRequired" class="mt-11">
+    <section v-if="mfaRequired" class="mt-8 w-full max-w-sm sm:max-w-lg mx-auto">
       <MfaVerification
         :mfa-token="mfaToken"
         @verified="handleMfaVerified"
@@ -250,10 +250,9 @@ export default {
     <!-- Regular Login Section -->
     <section
       v-else
-      class="sm:mx-auto mt-11 sm:w-full sm:max-w-lg p-11 sm:shadow-lg sm:rounded-lg"
+      class="mx-auto mt-6 sm:mt-10 w-full max-w-sm sm:max-w-lg p-6 sm:p-10 shadow-lg rounded-lg"
       style="background: rgba(255,255,255,0.92); backdrop-filter: blur(6px);"
       :class="{
-        'mb-8 mt-15': !showGoogleOAuth,
         'animate-wiggle': loginApi.hasErrored,
       }"
     >
