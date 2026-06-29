@@ -26,7 +26,6 @@ import profile from './profile/profile.routes';
 import security from './security/security.routes';
 import conversationWorkflow from './conversationWorkflow/conversationWorkflow.routes';
 import captain from './captain/captain.routes';
-import asaas from './asaas/asaas.routes';
 
 export default {
   routes: [
@@ -68,6 +67,5 @@ export default {
     ...security.routes,
     ...conversationWorkflow.routes,
     ...captain.routes,
-    ...asaas.routes,
   ],
 };

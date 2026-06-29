@@ -716,12 +716,6 @@ const menuItems = computed(() => {
           to: accountScopedRoute('canned_list'),
         },
         {
-          name: 'Settings Asaas',
-          label: 'Integração Asaas',
-          icon: 'i-lucide-banknote',
-          to: accountScopedRoute('asaas_settings'),
-        },
-        {
           name: 'Settings Integrations',
           label: t('SIDEBAR.INTEGRATIONS'),
           icon: 'i-lucide-blocks',
