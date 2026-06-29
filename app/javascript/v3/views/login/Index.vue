@@ -318,6 +318,7 @@ export default {
             type="submit"
             data-testid="submit_button"
             class="w-full"
+            style="background: linear-gradient(to right, #028090, #05C7B4); border: none;"
             :tabindex="3"
             :label="$t('LOGIN.SUBMIT')"
             :disabled="loginApi.showLoading"
