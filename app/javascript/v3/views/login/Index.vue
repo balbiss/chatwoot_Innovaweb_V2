@@ -220,7 +220,8 @@ export default {
 
 <template>
   <main
-    class="flex flex-col w-full min-h-screen py-20 bg-n-brand/5 dark:bg-n-background sm:px-6 lg:px-8"
+    class="flex flex-col w-full min-h-screen py-20 sm:px-6 lg:px-8"
+    style="background-image: url('https://i.postimg.cc/c48RMykv/Gemini-Generated-Image-rjzou0rjzou0rjzo.png'); background-size: cover; background-position: center; background-repeat: no-repeat;"
   >
     <section class="max-w-5xl mx-auto flex flex-col items-center">
       <!-- Logo grande e centralizada -->
@@ -249,7 +250,8 @@ export default {
     <!-- Regular Login Section -->
     <section
       v-else
-      class="bg-white shadow sm:mx-auto mt-11 sm:w-full sm:max-w-lg dark:bg-n-solid-2 p-11 sm:shadow-lg sm:rounded-lg"
+      class="sm:mx-auto mt-11 sm:w-full sm:max-w-lg p-11 sm:shadow-lg sm:rounded-lg"
+      style="background: rgba(255,255,255,0.92); backdrop-filter: blur(6px);"
       :class="{
         'mb-8 mt-15': !showGoogleOAuth,
         'animate-wiggle': loginApi.hasErrored,
