@@ -220,17 +220,19 @@ export default {
 
 <template>
   <main
-    class="flex flex-col w-full min-h-screen py-8 sm:py-16 px-4 sm:px-6 lg:px-8"
-    style="background-image: url('https://i.postimg.cc/c48RMykv/Gemini-Generated-Image-rjzou0rjzou0rjzo.png'); background-size: cover; background-position: center; background-repeat: no-repeat;"
+    class="flex flex-col w-full min-h-screen py-6 sm:py-10 px-4 sm:px-6 lg:px-8 overflow-y-auto"
+    style="background-image: url('/brand-assets/login-bg.webp'); background-size: cover; background-position: center; background-repeat: no-repeat;"
   >
-    <section class="w-full max-w-sm sm:max-w-lg mx-auto flex flex-col items-center">
-      <!-- Logo grande e centralizada -->
+    <section class="w-full max-w-xs sm:max-w-sm mx-auto flex flex-col items-center">
+      <!-- Logo compacta e centralizada -->
       <img
-        src="https://i.postimg.cc/X7cHgLFw/Gemini-Generated-Image-alcehfalcehfalce-Photoroom.png"
+        src="/brand-assets/login-logo.webp"
         :alt="globalConfig.installationName"
-        class="block mx-auto w-full"
+        class="block mx-auto w-full max-h-32 sm:max-h-40 object-contain"
+        width="1280"
+        height="698"
       />
-      <p v-if="showSignupLink" class="mt-3 text-sm text-center text-n-slate-11">
+      <p v-if="showSignupLink" class="mt-2 text-sm text-center text-n-slate-11">
         {{ $t('COMMON.OR') }}
         <router-link to="auth/signup" class="lowercase text-link text-n-brand">
           {{ $t('LOGIN.CREATE_NEW_ACCOUNT') }}
@@ -239,7 +241,7 @@ export default {
     </section>
 
     <!-- MFA Verification Section -->
-    <section v-if="mfaRequired" class="mt-8 w-full max-w-sm sm:max-w-lg mx-auto">
+    <section v-if="mfaRequired" class="mt-6 w-full max-w-sm sm:max-w-lg mx-auto">
       <MfaVerification
         :mfa-token="mfaToken"
         @verified="handleMfaVerified"
@@ -250,7 +252,7 @@ export default {
     <!-- Regular Login Section -->
     <section
       v-else
-      class="mx-auto mt-6 sm:mt-10 w-full max-w-sm sm:max-w-lg p-6 sm:p-10 shadow-lg rounded-lg"
+      class="mx-auto mt-4 sm:mt-6 w-full max-w-sm sm:max-w-md p-5 sm:p-8 shadow-lg rounded-lg"
       style="background: rgba(255,255,255,0.92); backdrop-filter: blur(6px);"
       :class="{
         'animate-wiggle': loginApi.hasErrored,
