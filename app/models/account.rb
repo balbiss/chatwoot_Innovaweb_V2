@@ -37,6 +37,8 @@ class Account < ApplicationRecord
     check_for_column: false
   }.freeze
 
+  encrypts :google_calendar_refresh_token
+
   validates :name, presence: true
   # `domain` is the inbound email domain used to construct reply addresses
   # (see `inbound_email_domain`). Do not repurpose it for a website or any
