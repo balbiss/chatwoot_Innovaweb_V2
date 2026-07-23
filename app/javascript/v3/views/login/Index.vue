@@ -296,7 +296,7 @@ export default {
     <section class="w-full max-w-xs sm:max-w-sm mx-auto flex flex-col items-center">
       <!-- Logo compacta e centralizada -->
       <img
-        src="/brand-assets/login-logo.webp"
+        :src="'/brand-assets/login-logo.webp'"
         :alt="globalConfig.installationName"
         class="block mx-auto w-full max-h-32 sm:max-h-40 object-contain"
         width="1280"
