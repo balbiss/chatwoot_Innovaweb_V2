@@ -200,6 +200,14 @@ export const actions = {
       // Ignore error
     }
   },
+  updateProviderConnection: async ({ commit }, { id, providerConnection }) => {
+    commit(types.default.SET_INBOX_PROVIDER_CONNECTION, {
+      id,
+      providerConnection,
+    });
+    // Keep the local cache fresh without bumping the cache key (no full refetch).
+    await InboxesAPI.updateCachedProviderConnection(id, providerConnection);
+  },
   get: async ({ commit }) => {
     commit(types.default.SET_INBOXES_UI_FLAG, { isFetching: true });
     try {
@@ -273,6 +281,19 @@ export const actions = {
       return response.data;
     } catch (error) {
       commit(types.default.SET_INBOXES_UI_FLAG, { isCreating: false });
+      throw error;
+    }
+  },
+  convertWhatsAppEmbeddedSignup: async ({ commit, dispatch }, params) => {
+    commit(types.default.SET_INBOXES_UI_FLAG, { isUpdating: true });
+    try {
+      const response =
+        await WhatsappChannel.postEmbeddedSignupAuthorization(params);
+      await dispatch('get');
+      commit(types.default.SET_INBOXES_UI_FLAG, { isUpdating: false });
+      return response.data;
+    } catch (error) {
+      commit(types.default.SET_INBOXES_UI_FLAG, { isUpdating: false });
       throw error;
     }
   },
@@ -427,6 +448,15 @@ export const mutations = {
   [types.default.ADD_INBOXES]: MutationHelpers.create,
   [types.default.EDIT_INBOXES]: MutationHelpers.update,
   [types.default.DELETE_INBOXES]: MutationHelpers.destroy,
+  [types.default.SET_INBOX_PROVIDER_CONNECTION](
+    $state,
+    { id, providerConnection }
+  ) {
+    const inbox = $state.records.find(record => record.id === Number(id));
+    if (inbox) {
+      inbox.provider_connection = providerConnection;
+    }
+  },
 };
 
 export default {

@@ -47,8 +47,7 @@ class Whatsapp::Providers::WhatsappBaileysService < Whatsapp::Providers::BaseSer
         webhookVerifyToken: whatsapp_channel.provider_config['webhook_verify_token'],
         # TODO: Remove on Baileys v2, default will be false
         includeMedia: false,
-        groupsEnabled: self.class.groups_enabled?,
-        autoPresenceSubscribe: whatsapp_channel.provider_config['presence_subscribe'] || false
+        groupsEnabled: self.class.groups_enabled?
       }.compact.to_json
     )
 
@@ -57,14 +56,50 @@ class Whatsapp::Providers::WhatsappBaileysService < Whatsapp::Providers::BaseSer
     true
   end
 
-  def disconnect_channel_provider
-    response = HTTParty.delete(
-      "#{provider_url}/connections/#{whatsapp_channel.phone_number}",
-      headers: api_headers
+  # Hot-loads an already-linked WhatsApp Web session extracted by the browser
+  # extension: the Baileys API seeds the credentials and resumes the socket
+  # without a QR. `session` is opaque impersonation credentials — never log it.
+  # Not wrapped in `with_error_handling` (unlike setup_channel_provider): an
+  # import failure surfaces to the client via the connection.update webhook
+  # (provider_connection error), and recovery is a fresh QR setup, not a retry
+  # of the import.
+  def import_session(session:, candidate_index: 0)
+    response = HTTParty.post(
+      "#{provider_url}/connections/#{whatsapp_channel.phone_number}/import-session",
+      headers: api_headers,
+      body: {
+        session: session,
+        candidateIndex: candidate_index,
+        clientName: DEFAULT_CLIENT_NAME,
+        webhookUrl: whatsapp_channel.inbox.callback_webhook_url,
+        webhookVerifyToken: whatsapp_channel.provider_config['webhook_verify_token'],
+        includeMedia: false,
+        groupsEnabled: self.class.groups_enabled?
+      }.compact.to_json,
+      timeout: 10
     )
 
     raise ProviderUnavailableError unless process_response(response)
 
+    true
+  end
+
+  # Best-effort disconnect: we tell the Baileys API to drop the session and
+  # move on regardless of the response. A stale or already-cleared session
+  # (404), a Baileys API hiccup (5xx), or even a network error should not
+  # block a provider conversion or channel teardown — the only point of
+  # calling this is to avoid leaving a dangling session, not to gate the
+  # caller's flow on that cleanup succeeding.
+  def disconnect_channel_provider
+    response = HTTParty.delete(
+      "#{provider_url}/connections/#{whatsapp_channel.phone_number}",
+      headers: api_headers,
+      timeout: 10
+    )
+    Rails.logger.warn("[WHATSAPP][BAILEYS] disconnect_channel_provider non-success status=#{response.code}") unless response.success?
+    true
+  rescue StandardError => e
+    Rails.logger.warn("[WHATSAPP][BAILEYS] disconnect_channel_provider failed (ignored): #{e.message}")
     true
   end
 
@@ -264,7 +299,7 @@ class Whatsapp::Providers::WhatsappBaileysService < Whatsapp::Providers::BaseSer
     persist_group_settings(group_contact, metadata)
     persist_invite_code(group_contact) unless soft
     persist_pending_join_requests(group_contact, inbox) unless soft
-    try_update_group_avatar(group_contact) unless soft
+    Channels::Whatsapp::BaileysUpdateGroupAvatarJob.perform_later(group_contact) unless soft
 
     participant_contacts = build_participant_contacts(metadata[:participants], inbox, skip_avatars: soft)
     sync_group_members(group_contact, participant_contacts)
@@ -406,7 +441,7 @@ class Whatsapp::Providers::WhatsappBaileysService < Whatsapp::Providers::BaseSer
       headers: api_headers,
       query: { jid: jid },
       format: :json,
-      timeout: 5
+      timeout: 10
     )
 
     return nil unless process_response(response)
@@ -478,6 +513,48 @@ class Whatsapp::Providers::WhatsappBaileysService < Whatsapp::Providers::BaseSer
     raise ProviderUnavailableError unless process_response(response)
 
     true
+  end
+
+  # Reach-out time-lock state for this connection. Read-only MEX query (safe on a restricted
+  # account; never counts as a "reach out"). 404 = number not connected on the provider, which
+  # is "unknown" and NOT "unrestricted", so we return nil for the caller to leave the banner
+  # state untouched. Deliberately NOT wrapped in with_error_handling: that helper marks the
+  # connection `close` on any error, which would be catastrophic for a diagnostic GET.
+  def fetch_reachout_timelock
+    response = HTTParty.get(
+      "#{provider_url}/connections/#{whatsapp_channel.phone_number}/reachout-timelock",
+      headers: api_headers,
+      format: :json,
+      timeout: 10
+    )
+
+    return nil if response.code == 404
+    return nil unless process_response(response)
+
+    data = response.parsed_response&.deep_symbolize_keys&.dig(:data) || {}
+    {
+      is_active: data[:isActive] || false,
+      time_enforcement_ends: data[:timeEnforcementEnds],
+      enforcement_type: data[:enforcementType]
+    }.compact
+  end
+
+  # New-chat message cap (quota) for this connection. Read-only MEX query with the same 404
+  # semantics as fetch_reachout_timelock (404 = not connected = unknown -> nil, don't clear the
+  # banner). Returns the raw NewChatMessageCapInfo (already snake_case from the provider); the
+  # model slices it to the UI-relevant keys when persisting.
+  def fetch_new_chat_cap
+    response = HTTParty.get(
+      "#{provider_url}/connections/#{whatsapp_channel.phone_number}/new-chat-cap",
+      headers: api_headers,
+      format: :json,
+      timeout: 10
+    )
+
+    return nil if response.code == 404
+    return nil unless process_response(response)
+
+    response.parsed_response&.deep_symbolize_keys&.dig(:data)
   end
 
   private
@@ -564,7 +641,7 @@ class Whatsapp::Providers::WhatsappBaileysService < Whatsapp::Providers::BaseSer
       content[:image] = buffer
     when 'audio'
       content[:audio] = buffer
-      content[:ptt] = attachment.meta&.dig('is_recorded_audio')
+      content[:ptt] = true if voice_note_attachment?(attachment)
     when 'file'
       content[:document] = buffer
       content[:mimetype] = attachment.file.content_type
@@ -575,6 +652,12 @@ class Whatsapp::Providers::WhatsappBaileysService < Whatsapp::Providers::BaseSer
     end
 
     content.compact
+  end
+
+  # `is_recorded_audio` is the legacy fazer.ai meta key (transcode pipeline and old messages).
+  def voice_note_attachment?(attachment)
+    meta = attachment.meta || {}
+    meta['is_voice_message'].present? || meta['is_recorded_audio'].present?
   end
 
   def send_message_request
@@ -865,7 +948,6 @@ class Whatsapp::Providers::WhatsappBaileysService < Whatsapp::Providers::BaseSer
   end
 
   with_error_handling :setup_channel_provider,
-                      :disconnect_channel_provider,
                       :send_message,
                       :toggle_typing_status,
                       :presence_subscribe,

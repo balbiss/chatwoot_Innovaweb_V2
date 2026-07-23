@@ -15,6 +15,7 @@ module AccountSettingsSchema
         'hide_agent_all_tab': { 'type': %w[boolean null] },
         'asaas_api_key': { 'type': %w[string null] },
         'asaas_environment': { 'type': %w[string null], 'enum': ['production', 'sandbox', nil] },
+        'disable_agent_message_deletion': { 'type': %w[boolean null] },
         'captain_auto_resolve_mode': { 'type': %w[string null], 'enum': ['evaluated', 'legacy', 'disabled', nil] },
         'conversation_required_attributes': {
           'type': %w[array null],

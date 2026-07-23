@@ -269,17 +269,20 @@ export const mutations = {
         return;
       }
 
-      const { messages, ...updates } = conversation;
+      const {
+        messages,
+        event_metadata: eventMetadata,
+        ...updates
+      } = conversation;
       allConversations[index] = { ...selectedConversation, ...updates };
-      // The reactions controller bumps `updated_at` and dispatches
-      // CONVERSATION_UPDATED so the chat list preview refreshes; without this
-      // guard every emoji toggle would yank the open conversation back to the
-      // bottom via the SCROLL_TO_MESSAGE listener. When the latest preview row
-      // is a reaction, treat the update as preview-only and skip the scroll.
-      const lastIsReaction =
-        updates.last_non_activity_message?.content_attributes?.is_reaction ===
-        true;
-      if (_state.selectedChatId === conversation.id && !lastIsReaction) {
+      // The reactions controller dispatches CONVERSATION_UPDATED solely to
+      // refresh the chat list preview after a toggle (add/replace/remove); the
+      // open conversation should stay put. The backend tags the broadcast with
+      // `event_metadata.source = 'reaction_toggle'` so we can skip scroll
+      // unconditionally — heuristics on `last_non_activity_message` miss the
+      // case where newer non-reaction messages exist after the reacted target.
+      const isReactionUpdate = eventMetadata?.source === 'reaction_toggle';
+      if (_state.selectedChatId === conversation.id && !isReactionUpdate) {
         emitter.emit(BUS_EVENTS.SCROLL_TO_MESSAGE);
       }
     } else {
@@ -336,34 +339,21 @@ export const mutations = {
     }
   },
 
-  [types.UPDATE_CONVERSATION_CALL_STATUS](
+  [types.UPDATE_MESSAGE_CALL_STATUS](
     _state,
-    { conversationId, callStatus }
+    { conversationId, callStatus, callSid }
   ) {
     const chat = getConversationById(_state)(conversationId);
     if (!chat) return;
 
-    chat.additional_attributes = {
-      ...chat.additional_attributes,
-      call_status: callStatus,
-    };
-  },
-
-  [types.UPDATE_MESSAGE_CALL_STATUS](_state, { conversationId, callStatus }) {
-    const chat = getConversationById(_state)(conversationId);
-    if (!chat) return;
-
-    const lastCall = (chat.messages || []).findLast(
-      m => m.content_type === CONTENT_TYPES.VOICE_CALL
+    const message = (chat.messages || []).find(
+      m =>
+        m.content_type === CONTENT_TYPES.VOICE_CALL &&
+        m.call?.provider_call_id === callSid
     );
+    if (!message?.call) return;
 
-    if (!lastCall) return;
-
-    lastCall.content_attributes ??= {};
-    lastCall.content_attributes.data = {
-      ...lastCall.content_attributes.data,
-      status: callStatus,
-    };
+    message.call = { ...message.call, status: callStatus };
   },
 
   [types.SET_ACTIVE_INBOX](_state, inboxId) {

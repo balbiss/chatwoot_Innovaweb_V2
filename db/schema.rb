@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_04_22_170000) do
+ActiveRecord::Schema[7.1].define(version: 2026_07_03_000000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -378,7 +378,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_22_170000) do
 
   create_table "captain_documents", force: :cascade do |t|
     t.string "name"
-    t.string "external_link", null: false
+    t.text "external_link", null: false
     t.text "content"
     t.bigint "assistant_id", null: false
     t.bigint "account_id", null: false
@@ -389,9 +389,10 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_22_170000) do
     t.integer "sync_status"
     t.datetime "last_synced_at"
     t.datetime "last_sync_attempted_at"
+    t.index "assistant_id, md5(external_link)", name: "idx_captain_documents_on_assistant_id_and_external_link_md5", unique: true
+    t.index ["account_id", "assistant_id", "sync_status", "last_synced_at"], name: "idx_captain_documents_on_account_assistant_sync_stats"
     t.index ["account_id", "sync_status"], name: "index_captain_documents_on_account_id_and_sync_status"
     t.index ["account_id"], name: "index_captain_documents_on_account_id"
-    t.index ["assistant_id", "external_link"], name: "index_captain_documents_on_assistant_id_and_external_link", unique: true
     t.index ["assistant_id"], name: "index_captain_documents_on_assistant_id"
     t.index ["status"], name: "index_captain_documents_on_status"
   end
@@ -435,6 +436,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_22_170000) do
     t.bigint "parent_category_id"
     t.bigint "associated_category_id"
     t.string "icon", default: ""
+    t.string "icon_color", default: ""
     t.index ["associated_category_id"], name: "index_categories_on_associated_category_id"
     t.index ["locale", "account_id"], name: "index_categories_on_locale_and_account_id"
     t.index ["locale"], name: "index_categories_on_locale"
@@ -481,6 +483,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_22_170000) do
     t.jsonb "provider_config", default: {}
     t.string "provider"
     t.boolean "verified_for_sending", default: false, null: false
+    t.string "imap_authentication", default: "plain"
     t.index ["email"], name: "index_channel_email_on_email", unique: true
     t.index ["forward_to_email"], name: "index_channel_email_on_forward_to_email", unique: true
   end
@@ -560,6 +563,10 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_22_170000) do
     t.string "api_key_sid"
     t.jsonb "content_templates", default: {}
     t.datetime "content_templates_last_updated"
+    t.boolean "voice_enabled", default: false, null: false
+    t.string "twiml_app_sid"
+    t.string "api_key_secret"
+    t.jsonb "provider_config", default: {}
     t.index ["account_sid", "phone_number"], name: "index_channel_twilio_sms_on_account_sid_and_phone_number", unique: true
     t.index ["messaging_service_sid"], name: "index_channel_twilio_sms_on_messaging_service_sid", unique: true
     t.index ["phone_number"], name: "index_channel_twilio_sms_on_phone_number", unique: true
@@ -574,18 +581,6 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_22_170000) do
     t.datetime "updated_at", null: false
     t.boolean "tweets_enabled", default: true
     t.index ["account_id", "profile_id"], name: "index_channel_twitter_profiles_on_account_id_and_profile_id", unique: true
-  end
-
-  create_table "channel_voice", force: :cascade do |t|
-    t.string "phone_number", null: false
-    t.string "provider", default: "twilio", null: false
-    t.jsonb "provider_config", null: false
-    t.integer "account_id", null: false
-    t.jsonb "additional_attributes", default: {}
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["account_id"], name: "index_channel_voice_on_account_id"
-    t.index ["phone_number"], name: "index_channel_voice_on_phone_number", unique: true
   end
 
   create_table "channel_web_widgets", id: :serial, force: :cascade do |t|
@@ -631,6 +626,9 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_22_170000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "contacts_count", default: 0, null: false
+    t.jsonb "additional_attributes", default: {}
+    t.jsonb "custom_attributes", default: {}
+    t.datetime "last_activity_at", precision: nil
     t.index ["account_id", "domain"], name: "index_companies_on_account_and_domain", unique: true, where: "(domain IS NOT NULL)"
     t.index ["account_id"], name: "index_companies_on_account_id"
     t.index ["name", "account_id"], name: "index_companies_on_name_and_account_id"
@@ -815,6 +813,8 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_22_170000) do
     t.bigint "user_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "visibility", default: 0, null: false
+    t.index ["account_id", "filter_type", "visibility", "user_id"], name: "index_custom_filters_on_account_type_visibility_user"
     t.index ["account_id"], name: "index_custom_filters_on_account_id"
     t.index ["user_id"], name: "index_custom_filters_on_user_id"
   end
@@ -1291,6 +1291,14 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_22_170000) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "platform_banners", force: :cascade do |t|
+    t.text "banner_message", null: false
+    t.integer "banner_type", default: 0, null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
   create_table "portals", force: :cascade do |t|
     t.integer "account_id", null: false
     t.string "name", null: false
@@ -1334,6 +1342,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_22_170000) do
     t.bigint "author_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "hold_on_reply", default: false, null: false
     t.index ["account_id", "status"], name: "idx_recurring_sched_msgs_on_account_status"
     t.index ["account_id"], name: "index_recurring_scheduled_messages_on_account_id"
     t.index ["author_type", "author_id"], name: "index_recurring_scheduled_messages_on_author"
@@ -1404,6 +1413,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_22_170000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.bigint "recurring_scheduled_message_id"
+    t.boolean "hold_on_reply", default: false, null: false
     t.index ["account_id", "status"], name: "index_scheduled_messages_on_account_id_and_status"
     t.index ["account_id"], name: "index_scheduled_messages_on_account_id"
     t.index ["author_type", "author_id", "status"], name: "idx_on_author_type_author_id_status_6997d67ef6"
@@ -1495,6 +1505,26 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_22_170000) do
     t.index ["name", "account_id"], name: "index_teams_on_name_and_account_id", unique: true
   end
 
+  create_table "user_sessions", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "client_id", null: false
+    t.string "ip_address"
+    t.string "user_agent"
+    t.string "browser_name"
+    t.string "browser_version"
+    t.string "device_name"
+    t.string "platform_name"
+    t.string "platform_version"
+    t.string "city"
+    t.string "country"
+    t.string "country_code"
+    t.datetime "last_activity_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id", "client_id"], name: "index_user_sessions_on_user_id_and_client_id", unique: true
+    t.index ["user_id"], name: "index_user_sessions_on_user_id"
+  end
+
   create_table "users", id: :serial, force: :cascade do |t|
     t.string "provider", default: "email", null: false
     t.string "uid", default: "", null: false
@@ -1575,9 +1605,9 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_22_170000) do
   add_foreign_key "internal_chat_channel_teams", "internal_chat_channels"
   add_foreign_key "internal_chat_channel_teams", "teams"
   add_foreign_key "internal_chat_channels", "internal_chat_categories", column: "category_id"
-  add_foreign_key "internal_chat_channels", "users", column: "created_by_id"
+  add_foreign_key "internal_chat_channels", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "internal_chat_drafts", "internal_chat_channels"
-  add_foreign_key "internal_chat_drafts", "users"
+  add_foreign_key "internal_chat_drafts", "users", on_delete: :cascade
   add_foreign_key "internal_chat_message_attachments", "internal_chat_messages"
   add_foreign_key "internal_chat_messages", "accounts", on_delete: :cascade
   add_foreign_key "internal_chat_messages", "internal_chat_channels"
@@ -1597,6 +1627,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_22_170000) do
   add_foreign_key "scheduled_messages", "inboxes"
   add_foreign_key "scheduled_messages", "messages"
   add_foreign_key "scheduled_messages", "recurring_scheduled_messages"
+  add_foreign_key "user_sessions", "users"
   create_trigger("accounts_after_insert_row_tr", :generated => true, :compatibility => 1).
       on("accounts").
       after(:insert).

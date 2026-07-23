@@ -50,6 +50,44 @@ RSpec.describe Account do
     end
   end
 
+  describe 'conversation unread counts feature flag' do
+    let(:account) { create(:account) }
+    let(:inbox) { create(:inbox, account: account) }
+    let(:store) { Conversations::UnreadCounts::Store }
+    let(:inbox_key) { store.inbox_key(account.id, inbox.id) }
+
+    after do
+      store.clear_account!(account.id)
+    end
+
+    it 'clears unread count cache when the feature is enabled' do
+      build_unread_count_cache
+
+      account.enable_features!(:conversation_unread_counts)
+
+      expect(store.base_ready?(account.id)).to be(false)
+      expect(store.assignment_ready?(account.id)).to be(false)
+      expect(store.counts_for_keys([inbox_key])).to eq(inbox_key => 0)
+    end
+
+    it 'clears unread count cache when the feature is disabled' do
+      account.enable_features!(:conversation_unread_counts)
+      build_unread_count_cache
+
+      account.disable_features!(:conversation_unread_counts)
+
+      expect(store.base_ready?(account.id)).to be(false)
+      expect(store.assignment_ready?(account.id)).to be(false)
+      expect(store.counts_for_keys([inbox_key])).to eq(inbox_key => 0)
+    end
+
+    def build_unread_count_cache
+      store.mark_base_ready!(account.id)
+      store.mark_assignment_ready!(account.id)
+      store.add_base_membership(account_id: account.id, inbox_id: inbox.id, label_ids: [], conversation_id: 1)
+    end
+  end
+
   describe 'inbound_email_domain' do
     let(:account) { create(:account) }
 
@@ -285,6 +323,30 @@ RSpec.describe Account do
       it 'leaves hide_agent_all_tab untouched when hide_agent_unassigned_tab is false' do
         account.update!(hide_agent_unassigned_tab: false, hide_agent_all_tab: false)
         expect(account.reload.hide_agent_all_tab).to be false
+      end
+    end
+
+    context 'when toggling agent message deletion' do
+      it 'casts form input to boolean' do
+        account.disable_agent_message_deletion = '1'
+        expect(account.disable_agent_message_deletion).to be true
+
+        account.disable_agent_message_deletion = '0'
+        expect(account.disable_agent_message_deletion).to be false
+      end
+
+      it 'persists across save with the schema validator passing' do
+        account.update!(disable_agent_message_deletion: 'true')
+        reloaded = described_class.find(account.id)
+
+        expect(reloaded.disable_agent_message_deletion).to be true
+        expect(reloaded.settings['disable_agent_message_deletion']).to be true
+      end
+
+      it 'rejects non-boolean values via the JSON schema validator' do
+        account.settings = { disable_agent_message_deletion: 'maybe' }
+        expect(account).to be_invalid
+        expect(account.errors.messages).to have_key(:disable_agent_message_deletion)
       end
     end
 

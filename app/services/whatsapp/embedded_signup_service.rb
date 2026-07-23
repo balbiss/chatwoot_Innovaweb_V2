@@ -13,7 +13,6 @@ class Whatsapp::EmbeddedSignupService
 
     access_token = exchange_code_for_token
     phone_info = fetch_phone_info(access_token)
-    validate_token_access(access_token)
 
     channel = create_or_reauthorize_channel(access_token, phone_info)
     # NOTE: We call setup_webhooks explicitly here instead of relying on after_commit callback because:
@@ -42,22 +41,36 @@ class Whatsapp::EmbeddedSignupService
     Whatsapp::PhoneInfoService.new(@waba_id, @phone_number_id, access_token).perform
   end
 
-  def validate_token_access(access_token)
-    Whatsapp::TokenValidationService.new(access_token, @waba_id).perform
-  end
-
   def create_or_reauthorize_channel(access_token, phone_info)
     if @inbox_id.present?
-      Whatsapp::ReauthorizationService.new(
-        account: @account,
-        inbox_id: @inbox_id,
-        phone_number_id: @phone_number_id,
-        business_id: @business_id
-      ).perform(access_token, phone_info)
+      channel = @account.inboxes.find(@inbox_id).channel
+      if channel.provider == 'whatsapp_cloud'
+        Whatsapp::ReauthorizationService.new(
+          account: @account,
+          inbox_id: @inbox_id,
+          phone_number_id: @phone_number_id,
+          waba_id: @waba_id
+        ).perform(access_token, phone_info)
+      else
+        convert_channel_to_cloud(channel, access_token)
+      end
     else
       waba_info = { waba_id: @waba_id, business_name: phone_info[:business_name] }
       Whatsapp::ChannelCreationService.new(@account, waba_info, phone_info, access_token).perform
     end
+  end
+
+  def convert_channel_to_cloud(channel, access_token)
+    channel.convert_provider!(
+      new_provider: 'whatsapp_cloud',
+      new_provider_config: {
+        'api_key' => access_token,
+        'phone_number_id' => @phone_number_id,
+        'business_account_id' => @waba_id,
+        'source' => 'embedded_signup'
+      }
+    )
+    channel
   end
 
   def check_channel_health_and_prompt_reauth(channel)

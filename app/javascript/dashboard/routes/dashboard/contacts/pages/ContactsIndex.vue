@@ -351,6 +351,28 @@ const assignLabels = async labels => {
   }
 };
 
+const removeLabels = async labels => {
+  if (!labels.length || !selectedContactIds.value.length) {
+    return;
+  }
+
+  isBulkActionLoading.value = true;
+  try {
+    await BulkActionsAPI.create({
+      type: 'Contact',
+      ids: selectedContactIds.value,
+      labels: { remove: labels },
+    });
+    useAlert(t('CONTACTS_BULK_ACTIONS.REMOVE_LABELS_SUCCESS'));
+    clearSelection();
+    await fetchContactsBasedOnContext(pageNumber.value);
+  } catch (error) {
+    useAlert(t('CONTACTS_BULK_ACTIONS.REMOVE_LABELS_FAILED'));
+  } finally {
+    isBulkActionLoading.value = false;
+  }
+};
+
 const deleteContacts = async () => {
   if (!selectedContactIds.value.length) {
     return;
@@ -404,7 +426,13 @@ const handleSort = async ({ sort, order }) => {
 
 const createContact = async contact => {
   await store.dispatch('contacts/create', contact);
+  await fetchContactsBasedOnContext(pageNumber.value, {
+    clearSelection: false,
+  });
 };
+
+const onContactCreated = () =>
+  fetchContactsBasedOnContext(pageNumber.value, { clearSelection: false });
 
 watch(hasSelection, value => {
   if (!value) {
@@ -497,6 +525,7 @@ onMounted(async () => {
       @apply-filter="fetchSavedOrAppliedFilteredContact"
       @clear-filters="fetchContacts"
       @load-more="loadMoreSearchResults"
+      @contact-created="onContactCreated"
     >
       <div
         v-if="isFetchingList && !(isSearchView && hasContacts)"
@@ -514,6 +543,7 @@ onMounted(async () => {
           @toggle-all="toggleSelectAll"
           @clear-selection="clearSelection"
           @assign-labels="assignLabels"
+          @remove-labels="removeLabels"
           @delete-selected="openBulkDeleteDialog"
         />
         <ContactEmptyState
