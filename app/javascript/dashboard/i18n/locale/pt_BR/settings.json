@@ -278,6 +278,10 @@
     "DELETED_USER": "Deletar Usuário",
     "EMAIL_VERIFICATION_PENDING": "Parece que você ainda não verificou seu endereço de e-mail. Por favor, verifique sua caixa de entrada pelo e-mail de verificação.",
     "RESEND_VERIFICATION_MAIL": "Reenviar e-mail de verificação",
+    "ENABLE_PUSH_NOTIFICATIONS": "Ative as notificações para saber na hora quando uma conversa for atribuída a você.",
+    "ENABLE_PUSH_NOTIFICATIONS_BUTTON": "Ativar notificações",
+    "PUSH_NOTIFICATIONS_BLOCKED": "As notificações estão bloqueadas para este app. Ative pelas configurações do navegador ou do celular para ser avisado.",
+    "PUSH_NOTIFICATIONS_ENABLED": "Notificações ativadas com sucesso.",
     "EMAIL_VERIFICATION_SENT": "O e-mail de verificação foi enviado. Por favor, verifique sua caixa de entrada.",
     "ACCOUNT_SUSPENDED": {
       "TITLE": "Conta Suspensa",

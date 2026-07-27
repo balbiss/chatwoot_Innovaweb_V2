@@ -290,6 +290,10 @@
     "EMAIL_VERIFICATION_PENDING": "It seems that you haven't verified your email address yet. Please check your inbox for the verification email.",
     "RESEND_VERIFICATION_MAIL": "Resend verification email",
     "EMAIL_VERIFICATION_SENT": "Verification email has been sent. Please check your inbox.",
+    "ENABLE_PUSH_NOTIFICATIONS": "Enable notifications to get notified when a conversation is assigned to you.",
+    "ENABLE_PUSH_NOTIFICATIONS_BUTTON": "Enable notifications",
+    "PUSH_NOTIFICATIONS_BLOCKED": "Notifications are blocked for this app. Enable them in your browser or phone settings to get notified.",
+    "PUSH_NOTIFICATIONS_ENABLED": "Notifications enabled successfully.",
     "ACCOUNT_SUSPENDED": {
       "TITLE": "Account Suspended",
       "MESSAGE": "Your account is suspended. Please reach out to the support team for more information."
