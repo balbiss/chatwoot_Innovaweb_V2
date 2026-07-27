@@ -35,14 +35,52 @@ export default {
         : this.$t('APP_GLOBAL.ENABLE_PUSH_NOTIFICATIONS');
     },
   },
+  mounted() {
+    if (this.permissionState === 'granted') {
+      // Ja concedeu a permissao do navegador antes (inclusive antes deste
+      // banner existir) -- garante silenciosamente que as etiquetas de
+      // notificacao da conta tambem estao corretas, sem precisar reexibir
+      // nada pro agente.
+      this.ensureAssignmentPushFlagsEnabled().catch(() => {});
+    }
+  },
   methods: {
     getPermissionState() {
       return 'Notification' in window ? Notification.permission : 'unsupported';
     },
+    async ensureAssignmentPushFlagsEnabled() {
+      await this.$store.dispatch('userNotificationSettings/get');
+      const currentFlags =
+        this.$store.getters['userNotificationSettings/getSelectedPushFlags'] ||
+        [];
+      const requiredFlags = [
+        'push_conversation_assignment',
+        'push_assigned_conversation_new_message',
+      ];
+      const missingFlags = requiredFlags.filter(
+        flag => !currentFlags.includes(flag)
+      );
+      if (!missingFlags.length) {
+        return;
+      }
+      await this.$store.dispatch('userNotificationSettings/update', {
+        selectedEmailFlags:
+          this.$store.getters[
+            'userNotificationSettings/getSelectedEmailFlags'
+          ] || [],
+        selectedPushFlags: [...currentFlags, ...missingFlags],
+      });
+    },
     enableNotifications() {
       requestPushPermissions({
-        onSuccess: () => {
+        onSuccess: async () => {
           this.permissionState = 'granted';
+          try {
+            await this.ensureAssignmentPushFlagsEnabled();
+          } catch (error) {
+            // A inscricao do dispositivo ja funcionou; se essa parte falhar,
+            // o agente ainda pode ajustar em Perfil > Notificacoes.
+          }
           useAlert(this.$t('APP_GLOBAL.PUSH_NOTIFICATIONS_ENABLED'));
         },
       });
