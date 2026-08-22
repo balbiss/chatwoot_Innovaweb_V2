@@ -499,7 +499,10 @@ export default {
           if (newInbox?.ai_prompt !== oldInbox?.ai_prompt) {
             this.aiPrompt = newInbox?.ai_prompt || '';
           }
-          if (JSON.stringify(newInbox?.attendants_queue) !== JSON.stringify(oldInbox?.attendants_queue)) {
+          if (
+            JSON.stringify(newInbox?.attendants_queue) !==
+            JSON.stringify(oldInbox?.attendants_queue)
+          ) {
             this.attendantsQueue = newInbox?.attendants_queue || [];
           }
         }
@@ -1166,7 +1169,9 @@ export default {
               >
                 <TextArea
                   v-model="aiPrompt"
-                  :placeholder="$t('INBOX_MGMT.SETTINGS_POPUP.AI_PROMPT_PLACEHOLDER')"
+                  :placeholder="
+                    $t('INBOX_MGMT.SETTINGS_POPUP.AI_PROMPT_PLACEHOLDER')
+                  "
                   auto-height
                   resize
                   class="w-full"
@@ -1174,7 +1179,11 @@ export default {
               </SettingsFieldSection>
               <div class="flex justify-end mx-6 mb-4">
                 <NextButton
-                  :label="$t('INBOX_MGMT.EDIT.SENDER_NAME_SECTION.BUSINESS_NAME.SAVE_BUTTON_TEXT')"
+                  :label="
+                    $t(
+                      'INBOX_MGMT.EDIT.SENDER_NAME_SECTION.BUSINESS_NAME.SAVE_BUTTON_TEXT'
+                    )
+                  "
                   @click="updateInbox"
                 />
               </div>
@@ -1204,35 +1213,72 @@ export default {
                     @click="addAttendant"
                   />
                 </div>
-                
-                <table class="w-full text-left border-collapse" v-if="attendantsQueue.length > 0">
+
+                <table
+                  v-if="attendantsQueue.length > 0"
+                  class="w-full text-left border-collapse"
+                >
                   <thead>
                     <tr>
-                      <th class="border-b border-n-strong py-2 text-n-slate-11">Nome</th>
-                      <th class="border-b border-n-strong py-2 text-n-slate-11">Telefone</th>
-                      <th class="border-b border-n-strong py-2 text-n-slate-11 text-center">Ativo</th>
-                      <th class="border-b border-n-strong py-2 text-n-slate-11 text-right">Ações</th>
+                      <th class="border-b border-n-strong py-2 text-n-slate-11">
+                        Nome
+                      </th>
+                      <th class="border-b border-n-strong py-2 text-n-slate-11">
+                        Telefone
+                      </th>
+                      <th
+                        class="border-b border-n-strong py-2 text-n-slate-11 text-center"
+                      >
+                        Ativo
+                      </th>
+                      <th
+                        class="border-b border-n-strong py-2 text-n-slate-11 text-right"
+                      >
+                        Ações
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="(attendant, index) in attendantsQueue" :key="attendant.id" class="border-b border-n-weak">
+                    <tr
+                      v-for="(attendant, index) in attendantsQueue"
+                      :key="attendant.id"
+                      class="border-b border-n-weak"
+                    >
                       <td class="py-2 text-n-slate-12">{{ attendant.nome }}</td>
-                      <td class="py-2 text-n-slate-12">{{ attendant.telefone }}</td>
+                      <td class="py-2 text-n-slate-12">
+                        {{ attendant.telefone }}
+                      </td>
                       <td class="py-2 text-center">
-                        <input type="checkbox" :checked="attendant.ativo" @change="toggleAttendantStatus(index)" />
+                        <input
+                          type="checkbox"
+                          :checked="attendant.ativo"
+                          @change="toggleAttendantStatus(index)"
+                        />
                       </td>
                       <td class="py-2 text-right">
-                        <NextButton sm ghost red label="Remover" @click="removeAttendant(index)" />
+                        <NextButton
+                          sm
+                          ghost
+                          red
+                          label="Remover"
+                          @click="removeAttendant(index)"
+                        />
                       </td>
                     </tr>
                   </tbody>
                 </table>
-                <p v-else class="text-n-slate-11 text-center py-4">Nenhum atendente na fila.</p>
+                <p v-else class="text-n-slate-11 text-center py-4">
+                  Nenhum atendente na fila.
+                </p>
               </div>
 
               <div class="flex justify-end mx-6 mb-4 mt-4">
                 <NextButton
-                  :label="$t('INBOX_MGMT.EDIT.SENDER_NAME_SECTION.BUSINESS_NAME.SAVE_BUTTON_TEXT')"
+                  :label="
+                    $t(
+                      'INBOX_MGMT.EDIT.SENDER_NAME_SECTION.BUSINESS_NAME.SAVE_BUTTON_TEXT'
+                    )
+                  "
                   @click="updateInbox"
                 />
               </div>

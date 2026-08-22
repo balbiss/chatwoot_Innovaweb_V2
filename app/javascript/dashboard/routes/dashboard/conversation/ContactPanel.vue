@@ -304,9 +304,7 @@ onMounted(() => {
               title="Integração Asaas"
               :is-open="isContactSidebarItemOpen('is_asaas_open')"
               compact
-              @toggle="
-                value => toggleSidebarUIState('is_asaas_open', value)
-              "
+              @toggle="value => toggleSidebarUIState('is_asaas_open', value)"
             >
               <AsaasChargePanel
                 :conversation-id="conversationId"

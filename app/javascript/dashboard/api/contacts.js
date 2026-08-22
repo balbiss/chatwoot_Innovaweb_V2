@@ -111,5 +111,4 @@ class ContactAPI extends ApiClient {
   }
 }
 
-
 export default new ContactAPI();
