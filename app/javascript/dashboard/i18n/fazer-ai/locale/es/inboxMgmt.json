@@ -11,7 +11,9 @@
           "NATIVE": "WhatsApp (nativo)",
           "NATIVE_DESC": "Conecta un teléfono con el conector que ya viene en esta instalación",
           "UAZAPI": "Uazapi",
-          "UAZAPI_DESC": "Conecta un teléfono con tu propia instancia de Uazapi"
+          "UAZAPI_DESC": "Conecta un teléfono con tu propia instancia de Uazapi",
+          "WAHA": "WAHA",
+          "WAHA_DESC": "Conecta un teléfono con tu propia instancia de WAHA"
         },
         "PROVIDER_URL": {
           "LABEL": "URL del proveedor",
@@ -74,6 +76,11 @@
             },
             "PRESENCE_SUBSCRIBE": {
               "LABEL": "Mostrar cuándo el contacto está en línea"
+            },
+            "API_KEY": {
+              "LABEL": "Clave de API",
+              "PLACEHOLDER": "Pega el WAHA_API_KEY de tu instancia",
+              "ERROR": "La clave de API es obligatoria"
             }
           }
         }
@@ -165,7 +172,8 @@
       "WHATSAPP_BAILEYS": "WhatsApp - Baileys",
       "WHATSAPP_ZAPI": "WhatsApp - Z-API",
       "WHATSAPP_NATIVE": "WhatsApp - nativo",
-      "WHATSAPP_UAZAPI": "WhatsApp - Uazapi"
+      "WHATSAPP_UAZAPI": "WhatsApp - Uazapi",
+      "WHATSAPP_WAHA": "WhatsApp - WAHA"
     }
   }
 }

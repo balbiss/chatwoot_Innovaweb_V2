@@ -11,7 +11,9 @@
           "NATIVE": "WhatsApp (native)",
           "NATIVE_DESC": "Pair a phone through the connector that ships with this installation",
           "UAZAPI": "Uazapi",
-          "UAZAPI_DESC": "Pair a phone through your own Uazapi instance"
+          "UAZAPI_DESC": "Pair a phone through your own Uazapi instance",
+          "WAHA": "WAHA",
+          "WAHA_DESC": "Pair a phone through your own WAHA instance"
         },
         "PROVIDER_URL": {
           "LABEL": "Provider URL",
@@ -74,6 +76,11 @@
             },
             "PRESENCE_SUBSCRIBE": {
               "LABEL": "Show when the contact is online"
+            },
+            "API_KEY": {
+              "LABEL": "API key",
+              "PLACEHOLDER": "Paste the WAHA_API_KEY of your instance",
+              "ERROR": "The API key is required"
             }
           }
         }
@@ -165,7 +172,8 @@
       "WHATSAPP_BAILEYS": "WhatsApp - Baileys",
       "WHATSAPP_ZAPI": "WhatsApp - Z-API",
       "WHATSAPP_NATIVE": "WhatsApp - native",
-      "WHATSAPP_UAZAPI": "WhatsApp - Uazapi"
+      "WHATSAPP_UAZAPI": "WhatsApp - Uazapi",
+      "WHATSAPP_WAHA": "WhatsApp - WAHA"
     }
   }
 }

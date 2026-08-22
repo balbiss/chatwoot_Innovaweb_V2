@@ -62,6 +62,7 @@ const PROVIDER_TYPES = {
   ZAPI: 'zapi',
   NATIVE: 'native',
   UAZAPI: 'uazapi',
+  WAHA: 'waha',
 };
 
 // Upstream's own gate for the access-request card: the app id alone says embedded signup
@@ -94,6 +95,7 @@ const INBOX_PROVIDER_TO_KEY = {
   zapi: PROVIDER_TYPES.ZAPI,
   native: PROVIDER_TYPES.NATIVE,
   uazapi: PROVIDER_TYPES.UAZAPI,
+  waha: PROVIDER_TYPES.WAHA,
 };
 
 const currentProviderKey = computed(() => {
@@ -166,6 +168,12 @@ const PROVIDER_CATALOG = computed(() => [
     key: PROVIDER_TYPES.UAZAPI,
     title: t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.UAZAPI'),
     description: t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.UAZAPI_DESC'),
+    icon: 'i-woot-whatsapp',
+  },
+  {
+    key: PROVIDER_TYPES.WAHA,
+    title: t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.WAHA'),
+    description: t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.WAHA_DESC'),
     icon: 'i-woot-whatsapp',
   },
   {

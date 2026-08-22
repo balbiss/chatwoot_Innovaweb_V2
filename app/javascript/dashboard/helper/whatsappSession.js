@@ -6,7 +6,7 @@
  * is no 24-hour messaging window and no template requirement. Mirrors
  * `Whatsapp::Session::Registry.session_family?`.
  */
-export const SESSION_PROVIDERS = ['baileys', 'zapi', 'native', 'uazapi'];
+export const SESSION_PROVIDERS = ['baileys', 'zapi', 'native', 'uazapi', 'waha'];
 
 /**
  * What a provider can actually do. Mirrors `Whatsapp::Session::Capabilities::ALL`, which

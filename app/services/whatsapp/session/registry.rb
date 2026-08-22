@@ -50,6 +50,22 @@ module Whatsapp::Session::Registry # rubocop:disable Metrics/ModuleLength
         PRESENCE_SUBSCRIBE
       ]
     ),
+    Descriptor.new(
+      key: 'waha',
+      backend: 'Whatsapp::Session::Backends::Waha::Backend',
+      beta: true,
+      pairing_modes: %w[qr],
+      # code_pairing not declared: `/auth/request-code` answers 201 with no documented
+      # body and no confirmed way to read the code back (see Backend's own note) — same
+      # standard the uazapi descriptor holds group_invites to. edit/revoke/reactions/
+      # groups/account_limits are simply not implemented yet, not proven absent; add them
+      # here once a backend method exists for each.
+      capabilities: %w[qr_pairing typing presence read_receipts check_number profile_picture media_download],
+      fields: [
+        Field.new(name: 'base_url', type: 'url', required: true),
+        Field.new(name: 'api_key', type: 'password', required: true, secret: true)
+      ]
+    ),
     # Legacy: described so the UI can label and gate an existing inbox, never served here.
     Descriptor.new(
       key: 'baileys',

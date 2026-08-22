@@ -2,9 +2,11 @@
 # pair against a phone (QR code or pairing code) and speak the multi-device protocol,
 # as opposed to the hosted Cloud API family (`default`, `whatsapp_cloud`).
 #
-# Two backends ship with it: `native` (our Go connector, over Redis Streams) and
-# `uazapi` (HTTP + webhook). `baileys` and `zapi` are the frozen legacy of the same
-# family: they keep their own services and are only converted away from.
+# Three backends ship with it: `native` (our Go connector, over Redis Streams), `uazapi`
+# (HTTP + webhook, customer brings an existing hosted instance) and `waha` (HTTP +
+# webhook, this backend provisions the session itself — devlikeapro/waha). `baileys` and
+# `zapi` are the frozen legacy of the same family: they keep their own services and are
+# only converted away from.
 #
 # Everything above the Backend boundary speaks the canonical model in
 # Whatsapp::Session::Model. No JID, no provider payload and no provider name leaks
@@ -29,5 +31,5 @@ module Whatsapp::Session
 
   # Providers served by this layer. Legacy session providers are NOT here: they are
   # described by the registry (so the UI can label them) but routed to their own services.
-  PROVIDERS = %w[native uazapi].freeze
+  PROVIDERS = %w[native uazapi waha].freeze
 end

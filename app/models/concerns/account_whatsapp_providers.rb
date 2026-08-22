@@ -15,7 +15,7 @@ module AccountWhatsappProviders
   extend ActiveSupport::Concern
 
   included do
-    store_accessor :settings, :whatsapp_native_disabled, :whatsapp_uazapi_disabled
+    store_accessor :settings, :whatsapp_native_disabled, :whatsapp_uazapi_disabled, :whatsapp_waha_disabled
   end
 
   # The superadmin form posts "1"/"0" and the settings JSON schema only accepts booleans.
@@ -27,10 +27,15 @@ module AccountWhatsappProviders
     super(ActiveModel::Type::Boolean.new.cast(value))
   end
 
+  def whatsapp_waha_disabled=(value)
+    super(ActiveModel::Type::Boolean.new.cast(value))
+  end
+
   def whatsapp_session_provider_enabled?(provider)
     case provider.to_s
     when 'native' then !whatsapp_native_disabled
     when 'uazapi' then !whatsapp_uazapi_disabled
+    when 'waha' then !whatsapp_waha_disabled
     else false
     end
   end
