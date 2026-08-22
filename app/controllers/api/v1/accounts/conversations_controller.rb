@@ -2,8 +2,9 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
   include Events::Types
   include DateRangeHelper
   include HmacConcern
+  include ConversationCustomAttributesConcern
 
-  before_action :conversation, except: [:index, :meta, :search, :create, :filter, :presence_subscribe_bulk]
+  before_action :conversation, except: [:index, :meta, :search, :create, :filter, :presence_subscribe_bulk, :pins, :unpin]
   before_action :inbox, :contact, :contact_inbox, only: [:create]
 
   ATTACHMENT_RESULTS_PER_PAGE = 100
@@ -73,6 +74,39 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
     head :ok
   end
 
+  # Pins belong to a User; agent bots never reach these actions, they are not in BOT_ACCESSIBLE_ENDPOINTS.
+  #
+  # Both checks the pin runs read state a concurrent request can change before the insert lands, and they
+  # need different rows to serialize against: the agent's row for the per-user limit (same shape as
+  # AgentBuilder's seat limit), the conversation's for the resolved check, since only that one blocks a
+  # concurrent resolve from committing mid-flight. This is the only place that takes both, so the order
+  # cannot invert.
+  def pin
+    pin = Current.user.with_lock do
+      @conversation.with_lock do
+        ConversationPin.prune_hidden(Current.user, Current.account)
+        @conversation.conversation_pins.find_or_create_by!(user: Current.user)
+      end
+    end
+    render json: { conversation_id: @conversation.display_id, pinned_at: pin.created_at.to_f }
+  end
+
+  # Looked up through the pin rather than the conversation, and deliberately not through `current_user_pins`:
+  # removing your own pin never depends on still being able to see the conversation.
+  def unpin
+    Current.user.conversation_pins
+           .where(account_id: Current.account.id)
+           .joins(:conversation).where(conversations: { display_id: params[:id] })
+           .destroy_all
+    head :ok
+  end
+
+  # Joined, not just eager loaded: Conversation destroys its pins asynchronously, so between the row going
+  # away and the job running, an orphaned pin would render `nil.display_id`.
+  def pins
+    @conversation_pins = current_user_pins.joins(:conversation).includes(:conversation)
+  end
+
   def transcript
     render json: { error: 'email param missing' }, status: :unprocessable_entity and return if params[:email].blank?
     return render_payment_required('Email transcript is not available on your plan') unless @conversation.account.email_transcript_enabled?
@@ -85,25 +119,29 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
 
   def toggle_status
     # FIXME: move this logic into a service object
-    if pending_to_open_by_bot?
-      @conversation.bot_handoff!
-    elsif params[:status].present?
+    return @conversation.bot_handoff! if bot_handoff?
+
+    if params[:status].present?
       set_conversation_status
-      @status = @conversation.save!
     else
-      @status = @conversation.toggle_status
+      @conversation.status = @conversation.toggled_status
     end
-    assign_conversation if should_assign_conversation?
+
+    # Reopening self-assigns, and both changes have to land in the same save.
+    # `previous_changes` only carries the last one, so saving twice would hide
+    # the status change from every callback that reads `saved_change_to_status?`
+    # (the reopen activity message, automations, reporting). Saving once also
+    # means an inbox with `prevent_assignment_takeover` cannot answer 409 with
+    # the conversation already reopened.
+    handle_human_open if @conversation.open? && Current.user.is_a?(User)
+
+    @status = @conversation.save!
   end
 
-  def pending_to_open_by_bot?
+  def bot_handoff?
     return false unless Current.user.is_a?(AgentBot)
 
     @conversation.status == 'pending' && params[:status] == 'open'
-  end
-
-  def should_assign_conversation?
-    @conversation.status == 'open' && Current.user.is_a?(User) && Current.user&.agent?
   end
 
   def toggle_priority
@@ -146,11 +184,6 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
     update_last_seen_on_conversation(last_seen_at, true)
   end
 
-  def custom_attributes
-    @conversation.custom_attributes = params.permit(custom_attributes: {})[:custom_attributes]
-    @conversation.save!
-  end
-
   def destroy
     authorize @conversation, :destroy?
     ::Conversations::DeleteService.new(conversation: @conversation, user: Current.user, ip: request.ip).perform
@@ -181,6 +214,7 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
     # rubocop:enable Rails/SkipsModelValidations
 
     ::Conversations::UnreadCounts::Notifier.new(@conversation).perform
+    ::Conversations::UnreadCounts::FilteredCountInvalidator.new(Current.account).conversation_changed!
   end
 
   def unseen_activity?
@@ -207,14 +241,19 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
     @conversation.snoozed_until = parse_date_time(params[:snoozed_until].to_s) if params[:snoozed_until]
   end
 
-  def assign_conversation
-    @conversation.assignee = current_user
-    @conversation.save!
+  # Only stages the change; `toggle_status` owns the save.
+  def handle_human_open
+    @conversation.assignee_agent_bot = nil
+    @conversation.assignee = Current.user if Current.user.agent?
   end
 
   def conversation
     @conversation ||= Current.account.conversations.find_by!(display_id: params[:id])
     authorize @conversation, :show?
+  end
+
+  def current_user_pins
+    ConversationPin.visible_to(Current.user, Current.account)
   end
 
   def inbox
@@ -236,7 +275,8 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
     # fallback for the old case where we do look up only using source id
     # In future we need to change this and make sure we do look up on combination of inbox_id and source_id
     # and deprecate the support of passing only source_id as the param
-    @contact_inbox ||= ::ContactInbox.find_by!(source_id: params[:source_id])
+    lookup_scope = @inbox ? @inbox.contact_inboxes : ContactInbox.joins(:inbox).where(inboxes: { account_id: Current.account.id })
+    @contact_inbox ||= lookup_scope.find_by!(source_id: params[:source_id])
     authorize @contact_inbox.inbox, :show?
   rescue ActiveRecord::RecordNotUnique
     render json: { error: 'source_id should be unique' }, status: :unprocessable_entity
@@ -250,7 +290,7 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
       inbox: @inbox,
       source_id: params[:source_id],
       hmac_verified: hmac_verified?,
-      validate_baileys_phone: true
+      validate_whatsapp_phone: true
     ).perform
   end
 

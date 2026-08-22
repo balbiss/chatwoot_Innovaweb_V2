@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import { useVuelidate } from '@vuelidate/core';
 import { required, requiredIf } from '@vuelidate/validators';
 import { INBOX_TYPES, isVoiceCallEnabled } from 'dashboard/helper/inbox';
+import { isSessionProvider } from 'dashboard/helper/whatsappSession';
 import {
   getEffectiveChannelType,
   stripUnsupportedMarkdown,
@@ -76,12 +77,9 @@ const inboxTypes = computed(() => ({
   isEmail: props.targetInbox?.channelType === INBOX_TYPES.EMAIL,
   isTwilio: props.targetInbox?.channelType === INBOX_TYPES.TWILIO,
   isWhatsapp: props.targetInbox?.channelType === INBOX_TYPES.WHATSAPP,
-  isWhatsappBaileys:
+  isWhatsappSession:
     props.targetInbox?.channelType === INBOX_TYPES.WHATSAPP &&
-    props.targetInbox?.provider === 'baileys',
-  isWhatsappZapi:
-    props.targetInbox?.channelType === INBOX_TYPES.WHATSAPP &&
-    props.targetInbox?.provider === 'zapi',
+    isSessionProvider(props.targetInbox?.provider),
   isWebWidget: props.targetInbox?.channelType === INBOX_TYPES.WEB,
   isApi: props.targetInbox?.channelType === INBOX_TYPES.API,
   isEmailOrWebWidget:
@@ -105,10 +103,23 @@ const inboxChannelType = computed(() => props.targetInbox?.channelType || '');
 
 const voiceCallEnabled = computed(() => isVoiceCallEnabled(props.targetInbox));
 
+// Template-based WhatsApp flows (Cloud, Twilio) compose the content from the
+// template, so `message` stays optional there. Free-form WhatsApp providers
+// (Baileys, Z-API) send exactly what the form holds: without text nor an
+// attachment the backend would create an empty message that the provider
+// flags as unsupported, so require one of them.
 const validationRules = computed(() => ({
   selectedContact: { required },
   targetInbox: { required },
-  message: { required: requiredIf(!inboxTypes.value.isWhatsapp) },
+  message: {
+    required: requiredIf(() => {
+      if (!inboxTypes.value.isWhatsapp) return true;
+      if (inboxTypes.value.isWhatsappSession) {
+        return state.attachedFiles.length === 0;
+      }
+      return false;
+    }),
+  },
   subject: { required: requiredIf(inboxTypes.value.isEmail) },
 }));
 
@@ -308,9 +319,7 @@ const handleSendTwilioMessage = async ({ message, templateParams }) => {
 
 const shouldShowMessageEditor = computed(() => {
   return (
-    (!inboxTypes.value.isWhatsapp ||
-      inboxTypes.value.isWhatsappBaileys ||
-      inboxTypes.value.isWhatsappZapi) &&
+    (!inboxTypes.value.isWhatsapp || inboxTypes.value.isWhatsappSession) &&
     !showNoInboxAlert.value &&
     !inboxTypes.value.isTwilioWhatsapp
   );
@@ -413,8 +422,7 @@ useKeyboardEvents({
       v-else
       :attached-files="state.attachedFiles"
       :is-whatsapp-inbox="inboxTypes.isWhatsapp"
-      :is-whatsapp-baileys-inbox="inboxTypes.isWhatsappBaileys"
-      :is-whatsapp-zapi-inbox="inboxTypes.isWhatsappZapi"
+      :is-whatsapp-session-inbox="inboxTypes.isWhatsappSession"
       :is-email-or-web-widget-inbox="inboxTypes.isEmailOrWebWidget"
       :is-twilio-sms-inbox="inboxTypes.isTwilioSMS"
       :is-twilio-whats-app-inbox="inboxTypes.isTwilioWhatsapp"

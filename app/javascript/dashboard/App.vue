@@ -6,10 +6,12 @@ import StatusBanner from './components/app/StatusBanner.vue';
 import PaymentPendingBanner from './components/app/PaymentPendingBanner.vue';
 import PendingEmailVerificationBanner from './components/app/PendingEmailVerificationBanner.vue';
 import PushNotificationBanner from './components/app/PushNotificationBanner.vue';
+import LowBackupCodesBanner from './components/app/LowBackupCodesBanner.vue';
 import vueActionCable from './helper/actionCable';
 import { useRouter } from 'vue-router';
 import { useStore } from 'dashboard/composables/store';
 import WootSnackbarBox from './components/SnackbarContainer.vue';
+import AssignmentConflictDialog from './components/AssignmentConflictDialog.vue';
 import { setColorTheme } from './helper/themeHelper';
 import { isOnOnboardingView } from 'v3/helpers/RouteHelper';
 import { useAccount } from 'dashboard/composables/useAccount';
@@ -30,8 +32,10 @@ export default {
     StatusBanner,
     PaymentPendingBanner,
     WootSnackbarBox,
+    AssignmentConflictDialog,
     PendingEmailVerificationBanner,
     PushNotificationBanner,
+    LowBackupCodesBanner,
   },
   setup() {
     const router = useRouter();
@@ -139,6 +143,7 @@ export default {
       <PendingEmailVerificationBanner v-if="hideOnOnboardingView" />
       <PaymentPendingBanner v-if="hideOnOnboardingView" />
       <PushNotificationBanner v-if="hideOnOnboardingView" />
+      <LowBackupCodesBanner v-if="hideOnOnboardingView" />
     </template>
     <router-view v-slot="{ Component }">
       <transition name="fade" mode="out-in">
@@ -146,6 +151,7 @@ export default {
       </transition>
     </router-view>
     <WootSnackbarBox />
+    <AssignmentConflictDialog />
     <NetworkNotification />
   </div>
   <LoadingState v-else />

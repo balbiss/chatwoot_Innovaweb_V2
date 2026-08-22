@@ -15,12 +15,14 @@ import ConversationLabelSuggestion from './conversation/LabelSuggestion.vue';
 import Banner from 'dashboard/components/ui/Banner.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import ResizableEditorWrapper from './ResizableEditorWrapper.vue';
+import ReferralBubble from 'dashboard/components-next/Conversation/ReferralBubble.vue';
 
 // stores and apis
 import { mapGetters } from 'vuex';
 
 // mixins
 import inboxMixin, { INBOX_FEATURES } from 'shared/mixins/inboxMixin';
+import { CAPABILITIES } from 'dashboard/helper/whatsappSession';
 
 // utils
 import { emitter } from 'shared/helpers/mitt';
@@ -36,7 +38,9 @@ import {
 // constants
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import { REPLY_POLICY } from 'shared/constants/links';
-import wootConstants from 'dashboard/constants/globals';
+import wootConstants, {
+  META_RESTRICTION_STATUS_URL,
+} from 'dashboard/constants/globals';
 import { LOCAL_STORAGE_KEYS } from 'dashboard/constants/localStorage';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
 import WhatsappLinkDeviceModal from '../../../routes/dashboard/settings/inbox/components/WhatsappLinkDeviceModal.vue';
@@ -58,6 +62,7 @@ export default {
     Spinner,
     ResizableEditorWrapper,
     WhatsappLinkDeviceModal,
+    ReferralBubble,
   },
   mixins: [inboxMixin],
   setup() {
@@ -122,7 +127,7 @@ export default {
       currentUser: 'getCurrentUser',
       listLoadingStatus: 'getAllMessagesLoaded',
       currentAccountId: 'getCurrentAccountId',
-      globalConfig: 'globalConfig/get',
+      isMetaMessageSendingDisabled: 'globalConfig/isMetaMessageSendingDisabled',
     }),
     currentInbox() {
       return this.$store.getters['inboxes/getInbox'](this.currentChat.inbox_id);
@@ -170,6 +175,9 @@ export default {
       }
       return messages;
     },
+    referralData() {
+      return this.currentChat?.additional_attributes?.referral || null;
+    },
     readMessages() {
       return getReadMessages(
         this.getMessages,
@@ -203,7 +211,12 @@ export default {
         instagramInbox
       );
     },
-
+    isInstagramRestrictionBannerVisible() {
+      return this.isMetaMessageSendingDisabled && this.isAnInstagramChannel;
+    },
+    instagramRestrictionStatusUrl() {
+      return META_RESTRICTION_STATUS_URL;
+    },
     replyWindowBannerMessage() {
       if (this.isAWhatsAppChannel) {
         return this.$t('CONVERSATION.TWILIO_WHATSAPP_CAN_REPLY');
@@ -278,15 +291,10 @@ export default {
       return { incoming, outgoing };
     },
     inboxSupportsEdit() {
-      // Currently only Baileys WhatsApp channel supports message editing
-      return this.isAWhatsAppBaileysChannel;
+      return this.hasInboxCapability(CAPABILITIES.EDIT);
     },
     inboxSupportsReactions() {
-      return (
-        this.isAWhatsAppCloudChannel ||
-        this.isAWhatsAppBaileysChannel ||
-        this.isAWhatsAppZapiChannel
-      );
+      return this.hasInboxCapability(CAPABILITIES.REACTIONS);
     },
     currentContact() {
       const senderId = this.currentChat?.meta?.sender?.id;
@@ -295,6 +303,13 @@ export default {
     },
     isGroupConversation() {
       return this.currentChat?.group_type === 'group';
+    },
+    groupMembersFetchTarget() {
+      if (!this.groupContactId || !this.isGroupConversation) return null;
+
+      return this.hasInboxCapability(CAPABILITIES.GROUPS)
+        ? this.groupContactId
+        : null;
     },
     groupContactId() {
       return this.currentChat?.meta?.sender?.id || null;
@@ -327,7 +342,7 @@ export default {
     },
     isAnnouncementModeRestricted() {
       return (
-        this.isAWhatsAppBaileysChannel &&
+        this.isASessionWhatsAppChannel &&
         this.isGroupConversation &&
         this.currentContact?.additional_attributes?.announce === true &&
         this.isGroupMembersLoaded &&
@@ -336,16 +351,18 @@ export default {
     },
     isGroupLeft() {
       return (
-        this.isAWhatsAppBaileysChannel &&
+        this.isASessionWhatsAppChannel &&
         this.isGroupConversation &&
         this.currentContact?.additional_attributes?.group_left === true
       );
     },
     isGroupsDisabled() {
+      // The server already strips the group capabilities when the kill switch is off, so
+      // the absence of `groups` is what "disabled" means here — for every provider.
       return (
-        this.isAWhatsAppBaileysChannel &&
+        this.isASessionWhatsAppChannel &&
         this.isGroupConversation &&
-        !this.globalConfig.baileysWhatsappGroupsEnabled
+        !this.hasInboxCapability(CAPABILITIES.GROUPS)
       );
     },
     isSuperAdmin() {
@@ -415,18 +432,15 @@ export default {
       this.messageSentSinceOpened = false;
       this.resetReplyEditorHeight();
     },
-    groupContactId: {
+    // Watches the whole condition, not just the contact. The capability arrives with the
+    // inbox, and that request can land after this component mounts, so a watcher keyed on
+    // the contact alone saw no capability, skipped the fetch and never ran again: a group
+    // thread stayed without members until the agent switched conversations.
+    groupMembersFetchTarget: {
       immediate: true,
       handler(contactId) {
-        if (
-          contactId &&
-          this.isAWhatsAppBaileysChannel &&
-          this.isGroupConversation &&
-          !this.isGroupMembersLoaded
-        ) {
-          this.$store.dispatch('groupMembers/fetch', {
-            contactId,
-          });
+        if (contactId && !this.isGroupMembersLoaded) {
+          this.$store.dispatch('groupMembers/fetch', { contactId });
         }
       },
     },
@@ -835,7 +849,7 @@ export default {
     class="flex flex-col justify-between flex-grow h-full min-w-0 m-0"
   >
     <div ref="topBannerRef">
-      <template v-if="isAWhatsAppBaileysChannel || isAWhatsAppZapiChannel">
+      <template v-if="isASessionWhatsAppChannel">
         <WhatsappLinkDeviceModal
           v-if="showLinkDeviceModal"
           :show="showLinkDeviceModal"
@@ -882,6 +896,14 @@ export default {
         />
       </template>
       <Banner
+        v-if="isInstagramRestrictionBannerVisible"
+        color-scheme="warning"
+        class="mx-2 mt-2 min-h-12 !h-auto rounded-lg"
+        :banner-message="$t('CONVERSATION.INSTAGRAM_RESTRICTION_BANNER')"
+        :href-link="instagramRestrictionStatusUrl"
+        :href-link-text="$t('CONVERSATION.INSTAGRAM_RESTRICTION_STATUS_LINK')"
+      />
+      <Banner
         v-if="!currentChat.can_reply"
         color-scheme="alert"
         class="mx-2 mt-2 overflow-hidden rounded-lg"
@@ -890,7 +912,7 @@ export default {
         :href-link-text="replyWindowLinkText"
       />
       <Banner
-        v-else-if="hasDuplicateInstagramInbox"
+        v-if="hasDuplicateInstagramInbox"
         color-scheme="alert"
         class="mx-2 mt-2 overflow-hidden rounded-lg"
         :banner-message="$t('CONVERSATION.OLD_INSTAGRAM_INBOX_REPLY_BANNER')"
@@ -946,6 +968,7 @@ export default {
             <Spinner v-if="shouldShowSpinner" class="text-n-brand" />
           </li>
         </transition>
+        <ReferralBubble v-if="referralData" :referral="referralData" />
       </template>
       <template #unreadBadge>
         <li

@@ -67,6 +67,16 @@ Rails.application.routes.draw do
             resources :assistants do
               member do
                 post :playground
+                get :metrics
+                get :faq_stats
+                get :summary
+                get :drilldown
+              end
+              resource :stats, only: [], controller: :assistant_stats do
+                get :overview
+                get :overview_summary
+                get :resolution_flow
+                get :resolution_trend
               end
               collection do
                 get :tools
@@ -74,7 +84,15 @@ Rails.application.routes.draw do
               resources :inboxes, only: [:index, :create, :destroy], param: :inbox_id
               resources :scenarios
             end
-            resources :assistant_responses
+            resources :agent_sessions, only: [:show]
+            resources :assistant_responses do
+              get :drilldown, on: :member
+            end
+            resources :faq_suggestions, only: [:index, :show, :update] do
+              post :approve, on: :member
+              post :dismiss, on: :member
+            end
+            resources :message_reports, only: [:create]
             resources :bulk_actions, only: [:create]
             resources :copilot_threads, only: [:index, :create] do
               resources :copilot_messages, only: [:index, :create]
@@ -84,6 +102,7 @@ Rails.application.routes.draw do
             end
             resources :documents, only: [:index, :show, :create, :destroy] do
               post :sync, on: :member
+              get :drilldown, on: :member
             end
             resource :tasks, only: [], controller: 'tasks' do
               post :rewrite
@@ -129,7 +148,12 @@ Rails.application.routes.draw do
               resources :inbox_limits, only: [:create, :update, :destroy]
             end
           end
-          resources :campaigns, only: [:index, :create, :show, :update, :destroy]
+          resources :campaigns, only: [:index, :create, :show, :update, :destroy] do
+            if ChatwootApp.enterprise?
+              get 'analytics/metrics', to: 'campaigns/analytics#metrics'
+              get 'analytics/contacts', to: 'campaigns/analytics#contacts'
+            end
+          end
           resources :dashboard_apps, only: [:index, :show, :create, :update, :destroy]
           get :leads_dashboard, to: 'leads_dashboard#index'
 
@@ -159,6 +183,7 @@ Rails.application.routes.draw do
               get :meta
               get :search
               get :unread_counts, to: 'conversations/unread_counts#index'
+              get :pins
               post :filter
               post :presence_subscribe_bulk
             end
@@ -185,6 +210,8 @@ Rails.application.routes.draw do
             member do
               post :mute
               post :unmute
+              post :pin
+              delete :unpin
               post :transcript
               post :toggle_status
               post :toggle_priority
@@ -193,6 +220,7 @@ Rails.application.routes.draw do
               post :update_last_seen
               post :unread
               post :custom_attributes
+              post :destroy_custom_attributes
               get :attachments
               get :inbox_assistant
               get :reporting_events if ChatwootApp.enterprise?
@@ -297,6 +325,18 @@ Rails.application.routes.draw do
               post :call, on: :member, to: 'calls#create' if ChatwootApp.enterprise?
             end
           end
+          resources :data_imports, only: [:index, :show, :create] do
+            collection do
+              post :validate_source
+            end
+            member do
+              post :start
+              post :retry, action: :retry_import
+              post :abandon
+              get :error_logs
+              get :skip_logs
+            end
+          end
           resources :csat_survey_responses, only: [:index] do
             collection do
               get :metrics
@@ -315,6 +355,7 @@ Rails.application.routes.draw do
           resources :reporting_events, only: [:index] if ChatwootApp.enterprise?
 
           if ChatwootApp.enterprise?
+            resources :calls, only: [:index]
             resources :whatsapp_calls, only: [:show] do
               member do
                 post :accept
@@ -330,10 +371,12 @@ Rails.application.routes.draw do
 
           resources :custom_attribute_definitions, only: [:index, :show, :create, :update, :destroy]
           resources :custom_filters, only: [:index, :show, :create, :update, :destroy]
+          resource :branded_email_layout, only: [:show, :update]
           resources :inboxes, only: [:index, :show, :create, :update, :destroy] do
             get :assignable_agents, on: :member
             get :campaigns, on: :member
             get :agent_bot, on: :member
+            get :message_templates, on: :member
             post :set_agent_bot, on: :member
             post :setup_channel_provider, on: :member
             post :import_whatsapp_session, on: :member
@@ -341,6 +384,7 @@ Rails.application.routes.draw do
             post :convert_provider, on: :member
             delete :avatar, on: :member
             post :sync_templates, on: :member
+            put :whatsapp_business_management_token, on: :member
             get :health, on: :member
             post :register_webhook, on: :member
             post :reset_secret, on: :member
@@ -426,6 +470,7 @@ Rails.application.routes.draw do
 
           namespace :whatsapp do
             resource :authorization, only: [:create]
+            resources :session_providers, only: [:index]
           end
 
           resources :webhooks, only: [:index, :create, :update, :destroy]
@@ -588,6 +633,7 @@ Rails.application.routes.draw do
               get :conversations
               get :conversations_summary
               get :conversation_traffic
+              get :drilldown
               get :bot_metrics
               get :inbox_label_matrix
               get :first_response_time_distribution
@@ -614,9 +660,11 @@ Rails.application.routes.draw do
             member do
               post :checkout
               post :subscription
+              post :select_billing_currency
               get :limits
               post :toggle_deletion
               post :topup_checkout
+              get :topup_options
             end
           end
         end
@@ -708,6 +756,10 @@ Rails.application.routes.draw do
   post 'webhooks/line/:line_channel_id', to: 'webhooks/line#process_payload'
   post 'webhooks/telegram/:bot_token', to: 'webhooks/telegram#process_payload'
   post 'webhooks/sms/:phone_number', to: 'webhooks/sms#process_payload'
+  # Ahead of the phone-number route below, which is the legacy shape: this one has more
+  # segments, so the two cannot collide, and keeping them together is what makes that
+  # obvious to whoever adds the next provider.
+  post 'webhooks/whatsapp/session/uazapi/:channel_id/:webhook_token', to: 'webhooks/whatsapp/uazapi#process_payload'
   get 'webhooks/whatsapp/:phone_number', to: 'webhooks/whatsapp#verify'
   post 'webhooks/whatsapp/:phone_number', to: 'webhooks/whatsapp#process_payload'
   get 'webhooks/instagram', to: 'webhooks/instagram#verify'
@@ -775,6 +827,7 @@ Rails.application.routes.draw do
       end
       resources :users, only: [:index, :new, :create, :show, :edit, :update, :destroy] do
         delete :avatar, on: :member, action: :destroy_avatar
+        post :resend_confirmation, on: :member
       end
 
       resources :access_tokens, only: [:index, :show]
