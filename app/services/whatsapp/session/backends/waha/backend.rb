@@ -275,8 +275,15 @@ class Whatsapp::Session::Backends::Waha::Backend < Whatsapp::Session::Backend
   # Same filtering as the uazapi backend's `fetch`: the url is the provider's own choice
   # (it arrives on the webhook, or on the message this ref was built from), so it is
   # resolved and refused unless public before Rails reads it.
+  #
+  # `headers` carries the API key: WAHA's own `media.url` (`.../api/files/...`) is served
+  # by the same authenticated API, and a request without the key answers 401 — confirmed
+  # live (2026-08-22, real inbound media from a test conversation came back marked
+  # `is_unsupported` because this fetch had no credentials).
   def fetch(url, mime: nil)
-    SafeFetch.fetch(url, max_bytes: MAX_MEDIA_BYTES, validate_content_type: false) do |result|
+    SafeFetch.fetch(url, max_bytes: MAX_MEDIA_BYTES, validate_content_type: false,
+                         headers: { Whatsapp::Session::Backends::Waha::Client::API_KEY_HEADER => provider_config['api_key'] },
+                         sensitive_headers: [Whatsapp::Session::Backends::Waha::Client::API_KEY_HEADER]) do |result|
       file = Tempfile.new('waha-media', binmode: true)
       IO.copy_stream(result.tempfile, file)
       file.rewind

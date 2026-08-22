@@ -77,8 +77,23 @@ module Whatsapp::Session::Backends::Waha::Backend::Messages
     { mimetype: content.mime.presence, filename: content.filename.presence, url: url }.compact
   end
 
+  # WHAT IS PROVEN (confirmed live, 2026-08-22, against a real send): despite `WAMessage.id`
+  # being documented as a plain string, the real `/api/sendText` response on this WEBJS
+  # session returns it as an object (`{fromMe, remote, id, _serialized}`) — the
+  # `_serialized` field is the flat id form every other part of this backend expects.
+  # `timestamp` is confirmed in seconds (matches the documented `WAMessage.timestamp`),
+  # and `Whatsapp::Session::Outbound::MessageSender` divides `SendResult#timestamp` by
+  # 1000 expecting milliseconds — sent through unconverted, a real outgoing message was
+  # stored with `external_created_at` truncated to a small number that rendered as
+  # "Jan 21 1970" in the dashboard.
   def send_result(result, command)
     result = result.to_h
-    model::SendResult.new(message_id: result['id'], timestamp: result['timestamp'], client_ref: command.try(:client_ref))
+    id = result['id']
+    message_id = id.is_a?(Hash) ? id['_serialized'] : id
+    timestamp = result['timestamp']
+    model::SendResult.new(
+      message_id: message_id, timestamp: (timestamp.to_i * 1000 if timestamp.present?),
+      client_ref: command.try(:client_ref)
+    )
   end
 end
