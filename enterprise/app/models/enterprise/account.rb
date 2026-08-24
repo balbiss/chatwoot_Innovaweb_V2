@@ -108,7 +108,14 @@ module Enterprise::Account
   def enable_default_features
     super
     if ChatwootApp.self_hosted_enterprise?
-      enable_features('captain_integration', 'captain_integration_v2')
+      # Mirrors enterprise/config/premium_features.yml — every premium feature,
+      # unlocked by default for every account on this self-hosted installation.
+      enable_features(
+        'disable_branding', 'audit_logs', 'sla', 'custom_roles',
+        'captain_integration', 'captain_integration_v2',
+        'captain_document_auto_sync', 'csat_review_notes',
+        'conversation_required_attributes'
+      )
     elsif ChatwootApp.chatwoot_cloud?
       internal_attributes[CAPTAIN_V2_DEFAULT_ELIGIBLE] = true
     end
