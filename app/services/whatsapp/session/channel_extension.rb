@@ -46,6 +46,14 @@ module Whatsapp::Session::ChannelExtension # rubocop:disable Metrics/ModuleLengt
     Whatsapp::Session::Registry.backend_for(self)
   end
 
+  # Not a delegate on the model, unlike `setup_channel_provider`: pairing by code is a
+  # session-family action, and the legacy services have nothing to answer it with.
+  def request_pairing_code
+    raise Whatsapp::Session::Errors::NotSupported, "#{provider} does not pair by code" unless session_provider?
+
+    provider_service.request_pairing_code
+  end
+
   # Two callers reach this, and they want opposite things. `convert_provider!` is neither:
   # it goes to the provider service directly.
   #
@@ -63,7 +71,7 @@ module Whatsapp::Session::ChannelExtension # rubocop:disable Metrics/ModuleLengt
     return super unless session_provider?
 
     unless @session_teardown
-      # The same teardown `super` performs, minus the rescue that swallows it. Not
+      # The same teardown `super` performs, minus its logging branch. Not
       # `backend.disconnect`: the facade deletes the session, and only disconnecting
       # leaves the pairing alive under a session id Chatwoot is about to stop using.
       provider_service.disconnect_channel_provider
@@ -110,6 +118,23 @@ module Whatsapp::Session::ChannelExtension # rubocop:disable Metrics/ModuleLengt
     return if updates.empty?
 
     with_lock { update_provider_connection!(provider_connection.merge(updates)) }
+  end
+
+  # Telling WhatsApp a message was received is an agent's act, and an import is not one.
+  # These are messages the contact sent long ago, or while nobody was watching: reading
+  # them on the operator's behalf puts the second tick on the contact's screen for a
+  # message no human has opened, and with `mark_as_read` on it empties a year of unread
+  # badges on the phone.
+  #
+  # Guarded here, without the `session_provider?` fallback the rest of this file uses, on
+  # purpose: the legacy path acknowledges from inside `build_and_save_message` and has no
+  # notion of an imported row, so the guard has to sit where both paths pass. The session
+  # writer stands down on its own (`MessageWriter#acknowledge`), so this is the only check
+  # the Baileys import gets and it costs the live path a thread-local read.
+  def received_messages(messages, conversation)
+    return if Import::SilentWrite.on?
+
+    super
   end
 
   def supports_reactions?

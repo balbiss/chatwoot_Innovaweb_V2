@@ -127,7 +127,10 @@ const getContactDetails = () => {
 
 const triggerGroupSync = () => {
   if (showGroupInfo.value && supportsGroups.value && contactId.value) {
-    store.dispatch('groupMembers/sync', { contactId: contactId.value });
+    store.dispatch('groupMembers/sync', {
+      contactId: contactId.value,
+      inboxId: props.inboxId,
+    });
   }
 };
 
@@ -296,9 +299,8 @@ onMounted(() => {
               />
             </AccordionItem>
           </div>
-          <!-- eslint-disable-next-line vue/no-bare-strings-in-template -->
           <div v-else-if="element.name === 'asaas_integration'">
-            <!-- eslint-disable-next-line vue/no-bare-strings-in-template -->
+            <!-- eslint-disable vue/no-bare-strings-in-template -->
             <AccordionItem
               v-if="contact.id"
               title="Integração Asaas"
@@ -306,6 +308,7 @@ onMounted(() => {
               compact
               @toggle="value => toggleSidebarUIState('is_asaas_open', value)"
             >
+              <!-- eslint-enable vue/no-bare-strings-in-template -->
               <AsaasChargePanel
                 :conversation-id="conversationId"
                 :contact-id="contact.id"

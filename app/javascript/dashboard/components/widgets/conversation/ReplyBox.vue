@@ -141,6 +141,13 @@ export default {
       isFocused: false,
       showEmojiPicker: false,
       attachedFiles: [],
+      // Bumped whenever the composer's privacy or conversation changes. A capture
+      // stamps it on the way in, so an upload that lands afterwards can tell that
+      // it outlived what the agent was composing under.
+      composerGeneration: 0,
+      // The recorder's capture starts when the mic is armed, not when the file
+      // shows up: talking and then converting to MP3 both happen in between.
+      recordingGeneration: 0,
       isRecordingAudio: false,
       recordingAudioState: '',
       recordingAudioDurationText: '',
@@ -190,12 +197,15 @@ export default {
     isGroupConversation() {
       return this.currentChat?.group_type === 'group';
     },
+    // The inbox is part of the target, not only the contact. A group contact is
+    // account-scoped, so the same group can be open in two inboxes of one account, and
+    // what the panel may do there is answered per inbox. Keyed on the contact alone,
+    // switching between the two threads kept the first inbox's answer.
     groupMembersFetchTarget() {
       if (!this.groupContactId || !this.isGroupConversation) return null;
+      if (!this.hasInboxCapability(CAPABILITIES.GROUPS)) return null;
 
-      return this.hasInboxCapability(CAPABILITIES.GROUPS)
-        ? this.groupContactId
-        : null;
+      return `${this.groupContactId}:${this.currentChat?.inbox_id}`;
     },
     groupContactId() {
       return this.currentChat?.meta?.sender?.id || null;
@@ -215,7 +225,8 @@ export default {
       if (!this.groupContactId) return {};
       return (
         this.$store.getters['groupMembers/getGroupMembersMeta'](
-          this.groupContactId
+          this.groupContactId,
+          this.currentChat?.inbox_id
         ) || {}
       );
     },
@@ -238,11 +249,15 @@ export default {
         !this.isInboxAdminInCurrentGroup
       );
     },
+    // Read off the conversation, not off the contact: a group contact is
+    // account-scoped and the same group can be open in two inboxes of one account,
+    // where only one of them may have left. The server answers for this thread's own
+    // number.
     isGroupLeft() {
       return (
         this.isASessionWhatsAppChannel &&
         this.isGroupConversation &&
-        this.currentContact?.additional_attributes?.group_left === true
+        this.currentChat?.group_left === true
       );
     },
     isGroupsDisabled() {
@@ -457,7 +472,9 @@ export default {
       return this.attachedFiles.some(file => file.isVoiceMessage);
     },
     showAudioRecorder() {
-      return !this.isOnPrivateNote && this.showFileUpload;
+      // A private note never reaches the channel, so the channel's upload
+      // support doesn't gate it — same rule the attach button already follows.
+      return this.showFileUpload || this.isOnPrivateNote;
     },
     showAudioRecorderEditor() {
       return this.showAudioRecorder && this.isRecordingAudio;
@@ -510,6 +527,13 @@ export default {
       return `draft-${this.conversationIdByRoute}-${this.effectiveReplyMode}`;
     },
     audioRecordFormat() {
+      // Notes stay inside Chatwoot, so the channel's preferred container is
+      // irrelevant. MP3 is the one format every browser and both mobile apps
+      // play, and it keeps long notes under the 25 MB transcription ceiling
+      // that uncompressed WAV would blow past in ~5 minutes.
+      if (this.isOnPrivateNote) {
+        return AUDIO_FORMATS.MP3;
+      }
       if (this.isAWhatsAppCloudChannel) {
         return AUDIO_FORMATS.OGG;
       }
@@ -654,6 +678,7 @@ export default {
     },
     conversationIdByRoute(conversationId, oldConversationId) {
       if (conversationId !== oldConversationId) {
+        this.composerGeneration += 1;
         this.switchDraftContext(conversationId, this.effectiveReplyMode);
         this.resetRecorderAndClearAttachments();
       }
@@ -668,9 +693,12 @@ export default {
     // thread stayed without members until the agent switched conversations.
     groupMembersFetchTarget: {
       immediate: true,
-      handler(contactId) {
-        if (contactId && !this.isGroupMembersLoaded) {
-          this.$store.dispatch('groupMembers/fetch', { contactId });
+      handler(target) {
+        if (target && !this.isGroupMembersLoaded) {
+          this.$store.dispatch('groupMembers/fetch', {
+            contactId: this.groupContactId,
+            inboxId: this.currentChat?.inbox_id,
+          });
         }
       },
     },
@@ -685,6 +713,19 @@ export default {
         mode: updatedReplyType,
       });
       this.switchDraftContext(this.conversationIdByRoute, updatedReplyType);
+      // The composer can leave note mode without the agent touching anything: a
+      // bot releases the pending conversation it owned, the messaging window
+      // reopens, an Instagram restriction lifts. Whatever is staged was produced
+      // under the old privacy but would be sent under the new one, so a voice
+      // note recorded for the team could reach the contact. The draft survives
+      // because switchDraftContext keeps one per mode; attachments and a cited
+      // private note have no such split, so they go.
+      this.composerGeneration += 1;
+      if (this.isRecordingAudio) this.onTypingOff();
+      this.resetRecorderAndClearAttachments();
+      if (this.inReplyTo?.private && !this.isOnPrivateNote) {
+        this.resetReplyToMessage();
+      }
     },
   },
 
@@ -949,7 +990,7 @@ export default {
         })
         .forEach(file => {
           const { name, type, size } = file;
-          this.onFileUpload({ name, type, size, file });
+          this.stageFile({ name, type, size, file });
         });
     },
     toggleUserMention(currentMentionState) {
@@ -1169,6 +1210,10 @@ export default {
       this.copilot.execute(action, data);
     },
     clearMessage() {
+      // Sending consumes the composer as much as switching mode does: a capture
+      // still uploading belongs to the message that just left, and would
+      // otherwise land in the empty composer and ride along with the next one.
+      this.composerGeneration += 1;
       this.message = '';
       this.clearCopilotAcceptedMessage();
       this.attachedFiles = [];
@@ -1191,6 +1236,7 @@ export default {
         this.resetAudioRecorderInput();
         this.onTypingOff();
       } else {
+        this.recordingGeneration = this.composerGeneration;
         this.onRecording();
       }
     },
@@ -1234,11 +1280,15 @@ export default {
 
       // Added a new key isVoiceMessage to the file to identify recorded audio
       // Because to filter and show only non recorded audio and other attachments
+      // Stamped with what the composer was when the mic was armed — the agent
+      // spoke and the audio was converted since, and either could have outlasted
+      // the mode the recording was meant for.
       const autoRecordedFile = {
         ...file,
         isVoiceMessage: true,
+        composerGeneration: this.recordingGeneration,
       };
-      return file && this.onFileUpload(autoRecordedFile);
+      return file && this.stageFile(autoRecordedFile);
     },
     onRecordError() {
       this.toggleAudioRecorder();
@@ -1258,7 +1308,28 @@ export default {
         isPrivate,
       });
     },
+    // Every capture goes through here: the recorder, the clip button, drag and
+    // drop, and paste. MP3 conversion and the upload that follows are async, so
+    // the composer can move to a public reply — or to another conversation —
+    // before the file ever arrives, and attachFile would then stage it under a
+    // privacy the agent never chose.
+    stageFile(file) {
+      if (!file) return;
+
+      // Never a positional second argument here: this is wired straight to the
+      // uploader's `input-file`, which emits (newFile, oldFile) and re-emits on
+      // every progress update. A recorder capture arrives already stamped, from
+      // when the mic was armed.
+      if (file.composerGeneration === undefined) {
+        file.composerGeneration = this.composerGeneration;
+      }
+      this.onFileUpload(file);
+    },
     attachFile({ blob, file }) {
+      const generation = file?.composerGeneration;
+      // Checked here so a stale recording can't clear a newer one below.
+      if (generation !== this.composerGeneration) return;
+
       if (file?.isVoiceMessage) {
         this.removeRecordedAudio();
       }
@@ -1268,6 +1339,11 @@ export default {
       const reader = new FileReader();
       reader.readAsDataURL(file.file);
       reader.onloadend = () => {
+        // Reading the file is async as well, so the mode can change between the
+        // two. The push is the only moment that decides what gets sent, so it is
+        // where the capture has to still be current.
+        if (generation !== this.composerGeneration) return;
+
         this.attachedFiles.push({
           currentChatId: this.currentChat.id,
           resource: blob || file,
@@ -1661,7 +1737,7 @@ export default {
         :is-send-disabled="isReplyButtonDisabled"
         :is-note="isPrivate"
         :is-editor-disabled="isEditorDisabled"
-        :on-file-upload="onFileUpload"
+        :on-file-upload="stageFile"
         :on-send="onSendReply"
         :conversation-type="conversationType"
         :recording-audio-duration-text="recordingAudioDurationText"

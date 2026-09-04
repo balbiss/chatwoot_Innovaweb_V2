@@ -13,6 +13,7 @@
       "id": "5541999990000"
     },
     "message_id": "3EB0A1B2C3D4E5F60720",
-    "reason": "media_key_expired"
+    "reason": "media_key_expired",
+    "recoverable": false
   }
 }

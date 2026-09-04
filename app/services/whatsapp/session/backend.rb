@@ -82,7 +82,6 @@ class Whatsapp::Session::Backend
   def logout = not_supported!(:logout)
   def delete_session = not_supported!(:delete_session)
   def fetch_connection_state = not_supported!(:fetch_connection_state)
-  def request_pairing_code(_command) = not_supported!(:request_pairing_code)
   def import_session(_payload) = not_supported!(:import_session)
 
   # Whatever the provider holds pointing at this inbox, released on its own. Called when
@@ -111,6 +110,11 @@ class Whatsapp::Session::Backend
   # the message id, which is what lets a provider find the original message and fetch its
   # bytes again once the ref it first handed out has lapsed.
   def download_media(_command) = not_supported!(:download_media)
+
+  # --- history ---------------------------------------------------------------------
+  # Asks for what came before. What comes back is not the answer to this call: the
+  # provider acknowledges it and the messages arrive as `history.sync` events.
+  def request_history(_command) = not_supported!(:request_history)
 
   # --- presence --------------------------------------------------------------------
   def send_chat_presence(_command) = not_supported!(:send_chat_presence)
