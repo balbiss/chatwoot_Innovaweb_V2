@@ -339,7 +339,7 @@ export default {
     <!-- Regular Login Section -->
     <section
       v-else
-      class="mx-auto mt-4 sm:mt-6 w-full max-w-sm sm:max-w-md p-5 sm:p-8 rounded-lg bg-[#1d1e24] border border-[rgba(255,90,0,0.25)] shadow-[0_8px_30px_rgba(255,90,0,0.08)]"
+      class="mx-auto mt-4 sm:mt-6 w-full max-w-sm sm:max-w-md p-5 sm:p-8 rounded-xl bg-[#16181d] border border-[#23272f] shadow-[0_10px_40px_rgba(0,0,0,0.6)]"
       :class="{
         'animate-wiggle': loginApi.hasErrored,
       }"
@@ -364,6 +364,7 @@ export default {
           <SimpleDivider
             v-if="showGoogleOAuth || showSamlLogin"
             :label="$t('COMMON.OR')"
+            bg="bg-[#16181d]"
             class="uppercase"
           />
         </div>
@@ -406,7 +407,7 @@ export default {
             lg
             type="submit"
             data-testid="submit_button"
-            class="w-full bg-gradient-to-r from-[#ff5a00] to-[#000000] border-none"
+            class="w-full bg-gradient-to-r from-[#f97316] to-[#3b82f6] border-none"
             :tabindex="3"
             :label="$t('LOGIN.SUBMIT')"
             :disabled="loginApi.showLoading"
