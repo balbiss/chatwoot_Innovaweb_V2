@@ -60,6 +60,9 @@ export default {
     return {
       // We need to initialize the component with any
       // properties that will be used in it
+      // Bound (not a static `src`) so Vite doesn't try to resolve this
+      // public/ asset as a build-time module import.
+      loginLogoSrc: '/brand-assets/login-logo.webp',
       credentials: {
         email: '',
         password: '',
@@ -297,7 +300,7 @@ export default {
     >
       <!-- Logo compacta e centralizada -->
       <img
-        src="/brand-assets/login-logo.webp"
+        :src="loginLogoSrc"
         :alt="globalConfig.installationName"
         class="block mx-auto w-full max-h-40 sm:max-h-56 object-contain"
         width="510"
