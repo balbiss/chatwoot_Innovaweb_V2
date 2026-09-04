@@ -296,13 +296,13 @@ export default {
     class="dark bg-[#000000] flex flex-col w-full min-h-screen py-6 sm:py-10 px-4 sm:px-6 lg:px-8 overflow-y-auto"
   >
     <section
-      class="w-full max-w-sm sm:max-w-lg mx-auto flex flex-col items-center"
+      class="w-full max-w-xs sm:max-w-sm mx-auto flex flex-col items-center"
     >
       <!-- Logo compacta e centralizada -->
       <img
         :src="loginLogoSrc"
         :alt="globalConfig.installationName"
-        class="block mx-auto w-full max-h-40 sm:max-h-56 object-contain"
+        class="block mx-auto w-full max-h-24 sm:max-h-28 object-contain"
         width="510"
         height="121"
       />
