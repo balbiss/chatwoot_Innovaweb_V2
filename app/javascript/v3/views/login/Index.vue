@@ -290,17 +290,18 @@ export default {
 
 <template>
   <main
-    class="flex flex-col w-full min-h-screen py-6 sm:py-10 px-4 sm:px-6 lg:px-8 overflow-y-auto"
-    style="background-image: url('/brand-assets/login-bg.webp'); background-size: cover; background-position: center; background-repeat: no-repeat;"
+    class="dark bg-black flex flex-col w-full min-h-screen py-6 sm:py-10 px-4 sm:px-6 lg:px-8 overflow-y-auto"
   >
-    <section class="w-full max-w-xs sm:max-w-sm mx-auto flex flex-col items-center">
+    <section
+      class="w-full max-w-sm sm:max-w-lg mx-auto flex flex-col items-center"
+    >
       <!-- Logo compacta e centralizada -->
       <img
-        :src="'/brand-assets/login-logo.webp'"
+        src="/brand-assets/login-logo.webp"
         :alt="globalConfig.installationName"
-        class="block mx-auto w-full max-h-32 sm:max-h-40 object-contain"
-        width="1280"
-        height="698"
+        class="block mx-auto w-full max-h-40 sm:max-h-56 object-contain"
+        width="510"
+        height="121"
       />
       <p v-if="showSignupLink" class="mt-2 text-sm text-center text-n-slate-11">
         {{ $t('COMMON.OR') }}
@@ -321,7 +322,10 @@ export default {
     </section>
 
     <!-- MFA Verification Section -->
-    <section v-if="mfaRequired" class="mt-6 w-full max-w-sm sm:max-w-lg mx-auto">
+    <section
+      v-if="mfaRequired"
+      class="mt-6 w-full max-w-sm sm:max-w-lg mx-auto"
+    >
       <MfaVerification
         :mfa-token="mfaToken"
         @verified="handleMfaVerified"
@@ -332,8 +336,7 @@ export default {
     <!-- Regular Login Section -->
     <section
       v-else
-      class="mx-auto mt-4 sm:mt-6 w-full max-w-sm sm:max-w-md p-5 sm:p-8 shadow-lg rounded-lg"
-      style="background: rgba(255,255,255,0.92); backdrop-filter: blur(6px);"
+      class="mx-auto mt-4 sm:mt-6 w-full max-w-sm sm:max-w-md p-5 sm:p-8 rounded-lg bg-[#1d1e24] border border-[rgba(255,90,0,0.25)] shadow-[0_8px_30px_rgba(255,90,0,0.08)]"
       :class="{
         'animate-wiggle': loginApi.hasErrored,
       }"
@@ -400,8 +403,7 @@ export default {
             lg
             type="submit"
             data-testid="submit_button"
-            class="w-full"
-            style="background: linear-gradient(to right, #028090, #05C7B4); border: none;"
+            class="w-full bg-gradient-to-r from-[#ff5a00] to-black border-none"
             :tabindex="3"
             :label="$t('LOGIN.SUBMIT')"
             :disabled="loginApi.showLoading"
@@ -413,6 +415,5 @@ export default {
         <Spinner color-scheme="primary" size="" />
       </div>
     </section>
-
   </main>
 </template>
