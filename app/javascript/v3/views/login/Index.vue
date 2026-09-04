@@ -293,7 +293,7 @@ export default {
 
 <template>
   <main
-    class="dark bg-black flex flex-col w-full min-h-screen py-6 sm:py-10 px-4 sm:px-6 lg:px-8 overflow-y-auto"
+    class="dark bg-[#000000] flex flex-col w-full min-h-screen py-6 sm:py-10 px-4 sm:px-6 lg:px-8 overflow-y-auto"
   >
     <section
       class="w-full max-w-sm sm:max-w-lg mx-auto flex flex-col items-center"
@@ -406,7 +406,7 @@ export default {
             lg
             type="submit"
             data-testid="submit_button"
-            class="w-full bg-gradient-to-r from-[#ff5a00] to-black border-none"
+            class="w-full bg-gradient-to-r from-[#ff5a00] to-[#000000] border-none"
             :tabindex="3"
             :label="$t('LOGIN.SUBMIT')"
             :disabled="loginApi.showLoading"
